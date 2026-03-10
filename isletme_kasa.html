@@ -1381,6 +1381,8 @@ function listenFirebase() {
   onSnapshot(q, (snap) => {
     satislarCache = snap.docs.map(d => d.data());
     renderKasaSatislar();
+    renderStats();
+    renderOzet();
   });
 }
 
@@ -1579,32 +1581,37 @@ function renderKasa() {
 }
 
 function renderStats() {
-  // Döviz bazlı bakiyeler
   const bakiye = { TL: 0, EUR: 0, USD: 0, GBP: 0, RUB: 0 };
 
+  // Manuel kasa hareketleri
   state.kasa.forEach(k => {
     const para = k.para || 'TL';
-    if (!bakiye[para] && bakiye[para] !== 0) bakiye[para] = 0;
-    bakiye[para] = (bakiye[para] || 0) + (k.tur === 'giris' ? k.tutar : -k.tutar);
+    if (bakiye[para] === undefined) bakiye[para] = 0;
+    bakiye[para] += (k.tur === 'giris' ? k.tutar : -k.tutar);
+  });
+
+  // Satışlar — EUR olarak ekle
+  satislarCache.forEach(s => {
+    bakiye['EUR'] += (s.total || 0);
   });
 
   // Ortak hareketleri
   state.ortakIslemler.forEach(i => {
     const etki = ORTAK_KASA_ETKI[i.tur];
     const para = i.para || 'TL';
-    bakiye[para] = (bakiye[para] || 0) + (etki === 'giris' ? i.tutar : -i.tutar);
+    if (bakiye[para] === undefined) bakiye[para] = 0;
+    bakiye[para] += (etki === 'giris' ? i.tutar : -i.tutar);
   });
 
   // Giderler TL'den düş
   const topGider = state.giderler.reduce((s,g) => s + g.tutar, 0);
-  bakiye['TL'] = (bakiye['TL'] || 0) - topGider;
+  bakiye['TL'] -= topGider;
 
   document.getElementById('stat-tl').textContent = fmt(bakiye.TL || 0) + ' ₺';
   document.getElementById('stat-eur').textContent = fmt(bakiye.EUR || 0) + ' €';
   document.getElementById('stat-usd').textContent = fmt(bakiye.USD || 0) + ' $';
   document.getElementById('stat-gbp').textContent = fmt(bakiye.GBP || 0) + ' £';
 
-  // Renk: negatifse kırmızı
   ['eur','usd','gbp'].forEach(c => {
     const el = document.getElementById('stat-' + c);
     const val = bakiye[c.toUpperCase()] || 0;
@@ -1838,6 +1845,12 @@ function renderOzet() {
     if (k.tur === 'giris') giris[p] = (giris[p]||0) + k.tutar;
     else cikis[p] = (cikis[p]||0) + k.tutar;
     bakiye[p] = (giris[p]||0) - (cikis[p]||0);
+  });
+
+  // Satışlar EUR olarak ekle
+  satislarCache.forEach(s => {
+    giris['EUR'] = (giris['EUR']||0) + (s.total||0);
+    bakiye['EUR'] = (giris['EUR']||0) - (cikis['EUR']||0);
   });
 
   state.ortakIslemler.forEach(i => {
