@@ -864,14 +864,20 @@ let qrSecili = new Set();
 function renderQrPage() {
   // Kategori filtreleri
   const allCats = [...new Set(PRODUCTS.map(p => p.cat.split(' › ')[0]))];
-  let activeQrCat = 'Tümü';
   document.getElementById('qrCatChips').innerHTML =
     ['Tümü', ...allCats].map(c =>
       `<button class="cat-chip ${c==='Tümü'?'active':''}" onclick="filterQrCat('${c}',this)">${c}</button>`
     ).join('');
 
-  // Tümünü seç
+  // Silinmiş ürünleri seçimden çıkar, yeni eklenenler otomatik seçili olsun
+  const mevcutIds = new Set(PRODUCTS.map(p => p.id));
+  // Silinenleri kaldır
+  for (const id of [...qrSecili]) {
+    if (!mevcutIds.has(id)) qrSecili.delete(id);
+  }
+  // Yeni eklenenleri otomatik seç
   PRODUCTS.forEach(p => qrSecili.add(p.id));
+
   renderQrGrid(PRODUCTS);
 }
 
@@ -1133,10 +1139,11 @@ async function saveSaleToFirebase(sale) {
     tur: 'giris',
     para: 'EUR',
     tutar: sale.total,
-    kur: 0, // Kasa modülü mevcut kuru kullanacak
+    kur: 1,
     aciklama: 'Satış: ' + sale.items.map(i => i.emoji + ' ' + i.name + (i.qty > 1 ? ' ×' + i.qty : '')).join(', '),
     tarih: sale.tarih.split('T')[0],
-    kaynakSatis: sale.id
+    kaynakSatis: sale.id,
+    kullaniciAd: sale.kullaniciAd || '—'
   };
   const stateRef = doc(db, 'isletme_kasa', 'state');
   const snap = await getDoc(stateRef);
