@@ -36,9 +36,12 @@ try {
 }
 
 // Expose to global scope for use in non-module scripts
-window._fb = { db, fbReady, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, getDoc };
+window._fb = { db, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, getDoc };
+window._fb.fbReady = fbReady;
+// fbReady'yi canlı tut
+if (fbReady) window._fb.fbReady = true;
 window._fbInit = function(cb) {
-  if (fbReady) cb(db);
+  if (window._fb.fbReady) cb(window._fb.db);
 };
 </script>
 <style>
@@ -1120,15 +1123,31 @@ let scannerStream = null;
 let scannerInterval = null;
 
 // ============ FIREBASE / STORAGE ============
-function getDB() { return window._fb && window._fb.fbReady ? window._fb.db : null; }
+function getDB() {
+  if (!window._fb) return null;
+  if (!window._fb.db) return null;
+  return window._fb.db; // fbReady kontrolünü kaldır, db varsa kullan
+}
 
 async function saveSaleToFirebase(sale) {
-  const db = getDB();
+  // Firebase hazır değilse kısa süre bekle
+  let db = getDB();
+  if (!db) {
+    let tries = 0;
+    await new Promise(resolve => {
+      const check = setInterval(() => {
+        db = getDB();
+        if (db || ++tries > 10) { clearInterval(check); resolve(); }
+      }, 300);
+    });
+  }
+
   if (!db) {
     // Fallback localStorage
     const history = JSON.parse(localStorage.getItem('satis_demo_history') || '[]');
     history.unshift(sale);
     localStorage.setItem('satis_demo_history', JSON.stringify(history));
+    showToast('⚠️ Çevrimdışı kaydedildi');
     return;
   }
   const { doc, setDoc, collection, getDoc } = window._fb;
