@@ -8,7 +8,7 @@
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, query, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ⚠️ BURAYA KENDİ FIREBASE BİLGİLERİNİZİ GİRİN (satis_demo ile aynı proje!)
 const firebaseConfig = {
@@ -21,18 +21,16 @@ const firebaseConfig = {
 };
 
 let db = null;
-let fbReady = false;
 
 try {
   const app = initializeApp(firebaseConfig);
   db = getFirestore(app);
-  fbReady = true;
   console.log("✅ Firebase bağlandı");
 } catch(e) {
   console.warn("⚠️ Firebase bağlanamadı", e);
 }
 
-window._fb = { db, fbReady, doc, setDoc, onSnapshot, getDoc };
+window._fb = { db, doc, setDoc, onSnapshot, getDoc, collection, query, orderBy, deleteDoc };
 </script>
 <style>
 :root {
@@ -646,9 +644,29 @@ tbody tr:last-child td { border-bottom: none; }
       </table>
     </div>
   </div>
-</div>
 
-<!-- ========== TOPTANCI ========== -->
+  <!-- Satışlar -->
+  <div class="card section-gap">
+    <div class="card-title" style="justify-content:space-between">
+      🧾 Satışlar
+      <span id="satisSyncStatus" style="font-size:11px;font-weight:600;color:var(--green)"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Ürünler</th>
+            <th>Tutar</th>
+            <th>👤 Kişi</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="kasaSatislarListesi"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 <div class="page" id="page-toptanci">
   <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
     <button class="btn btn-primary" onclick="openToptanciModal()">+ Toptancı Ekle</button>
@@ -1279,7 +1297,7 @@ let kurlar = { USD: 0, EUR: 0, GBP: 0, RUB: 0, updated: null };
 let _saveTimeout = null;
 
 // ===== STORAGE (Firebase + localStorage fallback) =====
-function getDB() { return window._fb && window._fb.fbReady ? window._fb.db : null; }
+function getDB() { return window._fb && window._fb.db ? window._fb.db : null; }
 
 function showSyncStatus(status) {
   let el = document.getElementById('syncStatus');
@@ -1327,19 +1345,26 @@ function saveKurlar() {
 
 function listenFirebase() {
   const db = getDB();
-  if (!db) { showSyncStatus('offline'); return; }
-  const { doc, onSnapshot } = window._fb;
+  if (!db) {
+    // Firebase yoksa biraz bekle, tekrar dene
+    setTimeout(() => {
+      if (getDB()) listenFirebase();
+      else showSyncStatus('offline');
+    }, 1000);
+    return;
+  }
+  const { doc, onSnapshot, collection, query, orderBy } = window._fb;
+
+  // Kasa state dinle
   onSnapshot(doc(db, 'isletme_kasa', 'state'), (snap) => {
     if (snap.exists()) {
       const data = snap.data();
-      // Merge: yerel state üzerine yaz
       if (data.kasa) state.kasa = data.kasa;
       if (data.toptancilar) state.toptancilar = data.toptancilar;
       if (data.toptanciIslemler) state.toptanciIslemler = data.toptanciIslemler;
       if (data.giderler) state.giderler = data.giderler;
       if (data.ortaklar) state.ortaklar = data.ortaklar;
       if (data.ortakIslemler) state.ortakIslemler = data.ortakIslemler;
-      // Re-render all
       renderKasa(); renderStats(); renderToptanciKartlar();
       renderToptanciIslemler(); renderToptanciFilter();
       renderGider(); renderGiderStats();
@@ -1349,6 +1374,13 @@ function listenFirebase() {
   }, (err) => {
     console.warn('Firestore dinleme hatası:', err);
     showSyncStatus('offline');
+  });
+
+  // Satışlar koleksiyonunu dinle — kasa hareketleriyle birleştir
+  const q = query(collection(db, 'satislar'), orderBy('id', 'desc'));
+  onSnapshot(q, (snap) => {
+    satislarCache = snap.docs.map(d => d.data());
+    renderKasaSatislar();
   });
 }
 
@@ -1580,7 +1612,41 @@ function renderStats() {
   });
 }
 
-// ===== TOPTANCI =====
+let satislarCache = [];
+
+function renderKasaSatislar() {
+  const el = document.getElementById('kasaSatislarListesi');
+  if (!el) return;
+  if (!satislarCache.length) {
+    el.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="icon">🧾</div><p>Henüz satış yok</p></div></td></tr>`;
+    return;
+  }
+  el.innerHTML = satislarCache.map(s => {
+    const d = new Date(s.tarih);
+    const tarihStr = d.toLocaleDateString('tr-TR', {day:'2-digit', month:'short'}) + ' ' + d.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
+    return `<tr>
+      <td>${tarihStr}</td>
+      <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.items.map(i=>i.emoji+' '+i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')}</td>
+      <td class="amount-pos" style="font-weight:800">€${fmt(s.total)}</td>
+      <td style="color:var(--accent);font-size:11px;font-weight:700">${s.kullaniciAd||'—'}</td>
+      <td><button class="btn btn-danger btn-icon btn-sm" onclick="satisSil('${s.id}')">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function satisSil(id) {
+  if (!confirm('Bu satışı silmek istiyor musunuz?')) return;
+  const db = getDB();
+  if (!db) { showToast('Bağlantı yok', 'error'); return; }
+  const { collection, doc, deleteDoc } = window._fb;
+  try {
+    await deleteDoc(doc(collection(db, 'satislar'), String(id)));
+    showToast('Satış silindi');
+  } catch(e) {
+    console.error(e);
+    showToast('Silinemedi', 'error');
+  }
+}
 function openToptanciModal() {
   ['toptanciAdi','toptanciTel','toptanciNot'].forEach(id => document.getElementById(id).value = '');
   openModal('toptanciModal');

@@ -1137,7 +1137,7 @@ async function saveSaleToFirebase(sale) {
     await new Promise(resolve => {
       const check = setInterval(() => {
         db = getDB();
-        if (db || ++tries > 10) { clearInterval(check); resolve(); }
+        if (db || ++tries > 15) { clearInterval(check); resolve(); }
       }, 300);
     });
   }
@@ -1150,26 +1150,10 @@ async function saveSaleToFirebase(sale) {
     showToast('⚠️ Çevrimdışı kaydedildi');
     return;
   }
-  const { doc, setDoc, collection, getDoc } = window._fb;
+
+  // Sadece satislar koleksiyonuna yaz — kasa modülü oradan dinler
+  const { doc, setDoc, collection } = window._fb;
   await setDoc(doc(collection(db, 'satislar'), String(sale.id)), sale);
-  // Kasa modülüne de otomatik yaz (gelir olarak)
-  const kasaEntry = {
-    id: Date.now() + 1,
-    tur: 'giris',
-    para: 'EUR',
-    tutar: sale.total,
-    kur: 1,
-    aciklama: 'Satış: ' + sale.items.map(i => i.emoji + ' ' + i.name + (i.qty > 1 ? ' ×' + i.qty : '')).join(', '),
-    tarih: sale.tarih.split('T')[0],
-    kaynakSatis: sale.id,
-    kullaniciAd: sale.kullaniciAd || '—'
-  };
-  const stateRef = doc(db, 'isletme_kasa', 'state');
-  const snap = await getDoc(stateRef);
-  const stateData = snap.exists() ? snap.data() : { kasa: [], toptancilar: [], toptanciIslemler: [], giderler: [], ortaklar: [{id:'o1',ad:'Mustafa'},{id:'o2',ad:'Fatih'}], ortakIslemler: [] };
-  if (!stateData.kasa) stateData.kasa = [];
-  stateData.kasa.unshift(kasaEntry);
-  await setDoc(stateRef, stateData);
 }
 
 function listenSales() {
@@ -1405,7 +1389,6 @@ function closeSuccess() {
 
 function renderHistory() {
   const el = document.getElementById('salesHistory');
-  // Satış temsilcisi sadece kendi satışlarını görsün
   let filtered = salesHistory;
   if (currentUser && currentUser.rol === 'satis') {
     filtered = salesHistory.filter(s => s.kullaniciId === currentUser.id);
@@ -1414,7 +1397,8 @@ function renderHistory() {
     el.innerHTML = `<div class="cart-empty"><div class="icon">📋</div><p>Henüz satış yok</p></div>`;
     return;
   }
-  el.innerHTML = filtered.slice(0,30).map(s => {
+  const silYetkisi = true;
+  el.innerHTML = filtered.slice(0,50).map(s => {
     const d = new Date(s.tarih);
     const label = d.toLocaleDateString('tr-TR',{day:'2-digit',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
     return `<div class="stat-row">
@@ -1428,9 +1412,24 @@ function renderHistory() {
       <div class="stat-right">
         <div class="stat-amount">€${fmt(s.total)}</div>
         <div class="stat-cnt">${s.items.reduce((a,i)=>a+i.qty,0)} ürün</div>
+        ${silYetkisi ? `<button onclick="satisSil('${s.id}')" style="background:rgba(244,63,94,.15);border:none;border-radius:8px;color:#f43f5e;padding:4px 8px;cursor:pointer;font-size:13px;margin-top:4px">🗑</button>` : ''}
       </div>
     </div>`;
   }).join('');
+}
+
+async function satisSil(id) {
+  if (!confirm('Bu satışı silmek istiyor musunuz?')) return;
+  const db = getDB();
+  if (!db) { showToast('Bağlantı yok'); return; }
+  const { doc, deleteDoc, collection } = window._fb;
+  try {
+    await deleteDoc(doc(collection(db, 'satislar'), String(id)));
+    showToast('Satış silindi');
+  } catch(e) {
+    console.error(e);
+    showToast('Silinemedi');
+  }
 }
 
 // ============ STATS ============
