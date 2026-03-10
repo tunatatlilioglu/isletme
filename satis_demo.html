@@ -1131,7 +1131,7 @@ async function saveSaleToFirebase(sale) {
     localStorage.setItem('satis_demo_history', JSON.stringify(history));
     return;
   }
-  const { doc, setDoc, collection } = window._fb;
+  const { doc, setDoc, collection, getDoc } = window._fb;
   await setDoc(doc(collection(db, 'satislar'), String(sale.id)), sale);
   // Kasa modülüne de otomatik yaz (gelir olarak)
   const kasaEntry = {
@@ -1147,7 +1147,7 @@ async function saveSaleToFirebase(sale) {
   };
   const stateRef = doc(db, 'isletme_kasa', 'state');
   const snap = await getDoc(stateRef);
-  const stateData = snap.exists() ? snap.data() : { kasa: [], toptancilar: [], toptanciIslemler: [], giderler: [], ortaklar: [{id:'o1',ad:'Ortak 1'},{id:'o2',ad:'Ortak 2'}], ortakIslemler: [] };
+  const stateData = snap.exists() ? snap.data() : { kasa: [], toptancilar: [], toptanciIslemler: [], giderler: [], ortaklar: [{id:'o1',ad:'Mustafa'},{id:'o2',ad:'Fatih'}], ortakIslemler: [] };
   if (!stateData.kasa) stateData.kasa = [];
   stateData.kasa.unshift(kasaEntry);
   await setDoc(stateRef, stateData);

@@ -550,28 +550,28 @@ tbody tr:last-child td { border-bottom: none; }
 
   <div class="stat-grid">
     <div class="stat-card blue">
-      <div class="stat-icon">💰</div>
-      <div class="stat-label">Kasa (TL)</div>
+      <div class="stat-icon">₺</div>
+      <div class="stat-label">Kasa TL</div>
       <div class="stat-value" id="stat-tl">0,00 ₺</div>
       <div class="stat-sub">Toplam TL bakiye</div>
     </div>
     <div class="stat-card green">
-      <div class="stat-icon">📈</div>
-      <div class="stat-label">Bugün Giriş</div>
-      <div class="stat-value green" id="stat-giris">0,00 ₺</div>
-      <div class="stat-sub">Bugünkü tahsilat</div>
+      <div class="stat-icon">€</div>
+      <div class="stat-label">Kasa EUR</div>
+      <div class="stat-value green" id="stat-eur">0,00 €</div>
+      <div class="stat-sub">Toplam Euro bakiye</div>
     </div>
-    <div class="stat-card red">
-      <div class="stat-icon">📉</div>
-      <div class="stat-label">Bugün Çıkış</div>
-      <div class="stat-value red" id="stat-cikis">0,00 ₺</div>
-      <div class="stat-sub">Bugünkü ödeme</div>
+    <div class="stat-card yellow">
+      <div class="stat-icon">$</div>
+      <div class="stat-label">Kasa USD</div>
+      <div class="stat-value" id="stat-usd">0,00 $</div>
+      <div class="stat-sub">Toplam Dolar bakiye</div>
     </div>
     <div class="stat-card purple">
-      <div class="stat-icon">🌍</div>
-      <div class="stat-label">Döviz (TL karşılığı)</div>
-      <div class="stat-value" id="stat-doviz">0,00 ₺</div>
-      <div class="stat-sub">USD + EUR + GBP toplamı</div>
+      <div class="stat-icon">£</div>
+      <div class="stat-label">Kasa GBP</div>
+      <div class="stat-value" id="stat-gbp">0,00 £</div>
+      <div class="stat-sub">Toplam Sterlin bakiye</div>
     </div>
   </div>
 
@@ -1270,8 +1270,8 @@ function kasaLogout() {
 let state = {
   kasa: [], toptancilar: [], toptanciIslemler: [], giderler: [],
   ortaklar: [
-    { id: 'o1', ad: 'Ortak 1' },
-    { id: 'o2', ad: 'Ortak 2' }
+    { id: 'o1', ad: 'Mustafa' },
+    { id: 'o2', ad: 'Fatih' }
   ],
   ortakIslemler: []
 };
@@ -1343,7 +1343,7 @@ function listenFirebase() {
       renderKasa(); renderStats(); renderToptanciKartlar();
       renderToptanciIslemler(); renderToptanciFilter();
       renderGider(); renderGiderStats();
-      renderOrtakFilter(); renderOrtakSayfasi();
+      renderOrtakFilter(); renderOrtakSayfasi(); renderOzet();
     }
     showSyncStatus('live');
   }, (err) => {
@@ -1547,37 +1547,37 @@ function renderKasa() {
 }
 
 function renderStats() {
-  const today = todayStr();
-  let totalTL = 0, bugunGiris = 0, bugunCikis = 0;
-  let dovizTL = 0;
-  const dovizBakiye = { USD: 0, EUR: 0, GBP: 0, RUB: 0 };
+  // Döviz bazlı bakiyeler
+  const bakiye = { TL: 0, EUR: 0, USD: 0, GBP: 0, RUB: 0 };
 
   state.kasa.forEach(k => {
-    const tlk = k.tutar * k.kur;
-    if (k.tur === 'giris') {
-      totalTL += (k.para === 'TL' ? k.tutar : 0);
-      if (k.tarih === today) bugunGiris += tlk;
-      if (k.para !== 'TL') dovizBakiye[k.para] = (dovizBakiye[k.para] || 0) + k.tutar;
-    } else {
-      totalTL -= (k.para === 'TL' ? k.tutar : 0);
-      if (k.tarih === today) bugunCikis += tlk;
-      if (k.para !== 'TL') dovizBakiye[k.para] = (dovizBakiye[k.para] || 0) - k.tutar;
-    }
+    const para = k.para || 'TL';
+    if (!bakiye[para] && bakiye[para] !== 0) bakiye[para] = 0;
+    bakiye[para] = (bakiye[para] || 0) + (k.tur === 'giris' ? k.tutar : -k.tutar);
   });
-  // Ortak hareketleri de kasayı etkiler
+
+  // Ortak hareketleri
   state.ortakIslemler.forEach(i => {
-    const tlk = i.tutar * i.kur;
     const etki = ORTAK_KASA_ETKI[i.tur];
-    if (i.para === 'TL') { etki === 'cikis' ? totalTL -= i.tutar : totalTL += i.tutar; }
-    if (i.tarih === today) { etki === 'cikis' ? bugunCikis += tlk : bugunGiris += tlk; }
+    const para = i.para || 'TL';
+    bakiye[para] = (bakiye[para] || 0) + (etki === 'giris' ? i.tutar : -i.tutar);
   });
 
-  ['USD','EUR','GBP','RUB'].forEach(c => { dovizTL += (dovizBakiye[c] || 0) * (kurlar[c] || 0); });
+  // Giderler TL'den düş
+  const topGider = state.giderler.reduce((s,g) => s + g.tutar, 0);
+  bakiye['TL'] = (bakiye['TL'] || 0) - topGider;
 
-  document.getElementById('stat-tl').textContent = fmt(totalTL) + ' ₺';
-  document.getElementById('stat-giris').textContent = fmt(bugunGiris) + ' ₺';
-  document.getElementById('stat-cikis').textContent = fmt(bugunCikis) + ' ₺';
-  document.getElementById('stat-doviz').textContent = fmt(dovizTL) + ' ₺';
+  document.getElementById('stat-tl').textContent = fmt(bakiye.TL || 0) + ' ₺';
+  document.getElementById('stat-eur').textContent = fmt(bakiye.EUR || 0) + ' €';
+  document.getElementById('stat-usd').textContent = fmt(bakiye.USD || 0) + ' $';
+  document.getElementById('stat-gbp').textContent = fmt(bakiye.GBP || 0) + ' £';
+
+  // Renk: negatifse kırmızı
+  ['eur','usd','gbp'].forEach(c => {
+    const el = document.getElementById('stat-' + c);
+    const val = bakiye[c.toUpperCase()] || 0;
+    el.className = 'stat-value ' + (val >= 0 ? 'green' : 'red');
+  });
 }
 
 // ===== TOPTANCI =====
@@ -1762,37 +1762,60 @@ function renderGiderStats() {
 
 // ===== ÖZET =====
 function renderOzet() {
-  // Kasa
-  let girisTopTL = 0, cikisTopTL = 0;
-  const dovizBakiye = { USD: 0, EUR: 0, GBP: 0, RUB: 0 };
+  // Döviz bazlı bakiye hesapla
+  const bakiye = { TL: 0, EUR: 0, USD: 0, GBP: 0, RUB: 0 };
+  const giris = { TL: 0, EUR: 0, USD: 0, GBP: 0, RUB: 0 };
+  const cikis = { TL: 0, EUR: 0, USD: 0, GBP: 0, RUB: 0 };
+
   state.kasa.forEach(k => {
-    if (k.para === 'TL') { k.tur==='giris' ? girisTopTL+=k.tutar : cikisTopTL+=k.tutar; }
-    else { dovizBakiye[k.para] = (dovizBakiye[k.para]||0) + (k.tur==='giris' ? k.tutar : -k.tutar); }
+    const p = k.para || 'TL';
+    if (k.tur === 'giris') giris[p] = (giris[p]||0) + k.tutar;
+    else cikis[p] = (cikis[p]||0) + k.tutar;
+    bakiye[p] = (giris[p]||0) - (cikis[p]||0);
   });
-  // Ortak hareketleri
-  const topOrtakCikis = state.ortakIslemler.filter(i=>ORTAK_KASA_ETKI[i.tur]==='cikis'&&i.para==='TL').reduce((s,i)=>s+i.tutar,0);
-  const topOrtakGiris = state.ortakIslemler.filter(i=>ORTAK_KASA_ETKI[i.tur]==='giris'&&i.para==='TL').reduce((s,i)=>s+i.tutar,0);
+
+  state.ortakIslemler.forEach(i => {
+    const etki = ORTAK_KASA_ETKI[i.tur];
+    const p = i.para || 'TL';
+    if (etki === 'giris') giris[p] = (giris[p]||0) + i.tutar;
+    else cikis[p] = (cikis[p]||0) + i.tutar;
+    bakiye[p] = (giris[p]||0) - (cikis[p]||0);
+  });
+
   const topGider = state.giderler.reduce((s,g)=>s+g.tutar,0);
+  bakiye['TL'] = (bakiye['TL']||0) - topGider;
+
+  const sym = {EUR:'€',USD:'$',GBP:'£',RUB:'₽',TL:'₺'};
+  const flag = {EUR:'🇪🇺',USD:'🇺🇸',GBP:'🇬🇧',RUB:'🇷🇺',TL:'🇹🇷'};
+
+  // Kasa özeti — EUR öne çıkar
   document.getElementById('ozetKasa').innerHTML = `
-    <div class="ozet-row"><span class="ozet-label">Toplam TL Giriş</span><span class="amount-pos ozet-val">${fmt(girisTopTL + topOrtakGiris)} ₺</span></div>
-    <div class="ozet-row"><span class="ozet-label">Toplam TL Çıkış</span><span class="amount-neg ozet-val">${fmt(cikisTopTL)} ₺</span></div>
-    <div class="ozet-row"><span class="ozet-label">Toplam Gider</span><span class="amount-neg ozet-val">${fmt(topGider)} ₺</span></div>
-    <div class="ozet-row"><span class="ozet-label">Ortak Çekimleri</span><span class="amount-neg ozet-val">${fmt(topOrtakCikis)} ₺</span></div>
-    <div class="ozet-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:12px">
-      <span style="font-weight:700">Net TL Kasa</span>
-      <span class="ozet-val" style="font-size:17px;color:var(--accent)">${fmt(girisTopTL + topOrtakGiris - cikisTopTL - topGider - topOrtakCikis)} ₺</span>
+    <div class="ozet-row" style="background:rgba(16,185,129,.06);border-radius:8px;padding:10px 6px;margin-bottom:8px;border-bottom:none">
+      <span style="font-weight:800;font-size:14px">🇪🇺 Toplam EUR</span>
+      <span class="${(bakiye.EUR||0)>=0?'amount-pos':'amount-neg'}" style="font-size:20px;font-weight:800;font-family:var(--mono)">€${fmt(Math.abs(bakiye.EUR||0))}</span>
+    </div>
+    ${['TL','USD','GBP','RUB'].map(p => {
+      const b = bakiye[p]||0;
+      if (b === 0 && p !== 'TL') return '';
+      return `<div class="ozet-row">
+        <span class="ozet-label">${flag[p]} ${p} Bakiye</span>
+        <span class="${b>=0?'amount-pos':'amount-neg'} ozet-val">${sym[p]}${fmt(Math.abs(b))}</span>
+      </div>`;
+    }).join('')}
+    <div class="ozet-row" style="border-top:2px solid var(--border);margin-top:8px;padding-top:10px">
+      <span class="ozet-label">Toplam Gider (TL)</span>
+      <span class="amount-neg ozet-val">${fmt(topGider)} ₺</span>
     </div>`;
 
-  // Döviz
-  document.getElementById('ozetDoviz').innerHTML = ['USD','EUR','GBP','RUB'].map(c => {
-    const b = dovizBakiye[c];
-    const sym = {USD:'$',EUR:'€',GBP:'£',RUB:'₽'}[c];
-    const flag = {USD:'🇺🇸',EUR:'🇪🇺',GBP:'🇬🇧',RUB:'🇷🇺'}[c];
+  // Döviz detay
+  document.getElementById('ozetDoviz').innerHTML = ['EUR','USD','GBP','RUB'].map(c => {
+    const g = giris[c]||0, ci = cikis[c]||0, b = bakiye[c]||0;
+    if (g === 0 && ci === 0) return `<div class="ozet-row"><span class="ozet-label">${flag[c]} ${c}</span><span style="color:var(--text3)">Hareket yok</span></div>`;
     return `<div class="ozet-row">
-      <span class="ozet-label">${flag} ${c}</span>
+      <span class="ozet-label">${flag[c]} ${c}</span>
       <div style="text-align:right">
-        <div class="${b>=0?'amount-pos':'amount-neg'} ozet-val">${sym}${fmt(Math.abs(b))}</div>
-        <div style="font-size:11px;color:var(--text3)">${kurlar[c]?'≈ '+fmt(b*kurlar[c])+' ₺':'kur yok'}</div>
+        <div class="${b>=0?'amount-pos':'amount-neg'} ozet-val">${sym[c]}${fmt(Math.abs(b))}</div>
+        <div style="font-size:10px;color:var(--text3)">Giriş: ${sym[c]}${fmt(g)} · Çıkış: ${sym[c]}${fmt(ci)}</div>
       </div>
     </div>`;
   }).join('');
@@ -2648,6 +2671,7 @@ function init() {
   renderKurBar();
   renderKasa();
   renderStats();
+  renderOzet();
   renderToptanciKartlar();
   renderToptanciIslemler();
   renderToptanciFilter();
