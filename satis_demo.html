@@ -1122,8 +1122,7 @@ function renderQrGrid(prods) {
     div.innerHTML = `
       <div class="qr-card-check">✓</div>
       <div id="qr-mini-${p.id}"></div>
-      <div class="qr-card-name">${p.name}</div>
-      <div class="qr-card-price">€${p.price}</div>`;
+      <div class="qr-card-name">${p.name}</div>`;
     div.onclick = () => {
       if (qrSecili.has(p.id)) qrSecili.delete(p.id);
       else qrSecili.add(p.id);
@@ -1174,7 +1173,6 @@ function printQrA4() {
       <div class="item">
         <img src="${dataUrl}" alt="QR">
         <div class="name">${p.name}</div>
-        <div class="price">€${p.price}</div>
         <div class="code">#${p.id}</div>
       </div>`);
   });
@@ -1217,7 +1215,6 @@ function printQrEtiket() {
       <div class="item">
         <img src="${dataUrl}" alt="QR">
         <div class="name">${p.emoji} ${p.name}</div>
-        <div class="price">€${p.price}</div>
       </div>`);
   });
 
