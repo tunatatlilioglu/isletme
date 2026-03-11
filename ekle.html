@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sepete Ekle</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117; --surface: #1a1d2e; --border: #2a2d3e;
+    --text: #f1f5f9; --text2: #94a3b8; --accent: #f59e0b;
+    --green: #10b981; --red: #f43f5e;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: system-ui, sans-serif;
+    min-height: 100dvh; display: flex;
+    flex-direction: column; align-items: center;
+    justify-content: center; padding: 24px;
+    text-align: center;
+  }
+  .emoji { font-size: 52px; margin-bottom: 12px; }
+  .prod-name { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+  .prod-price { font-size: 15px; color: var(--accent); margin-bottom: 32px; }
+  .status { font-size: 14px; color: var(--text2); margin-bottom: 24px; }
+  .users { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 280px; }
+  .user-btn {
+    padding: 16px; border-radius: 14px;
+    border: 2px solid var(--border); background: var(--surface);
+    color: var(--text); font-size: 17px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+  }
+  .user-btn:active { border-color: var(--accent); transform: scale(.97); }
+  .success { color: var(--green); font-size: 18px; font-weight: 800; }
+  .error-msg { color: var(--red); font-size: 15px; }
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .7s linear infinite; margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="spinner"></div>
+  <div class="status">Yükleniyor...</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAJFmBJpgrZEDlbFqRS_itUU_lEZklHEPg",
+  authDomain: "isletme-kasa.firebaseapp.com",
+  projectId: "isletme-kasa",
+  storageBucket: "isletme-kasa.firebasestorage.app",
+  messagingSenderId: "644544266522",
+  appId: "1:644544266522:web:fc70d2374a382ce0aa6ca3"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const USERS = [
+  { id: 'u1', ad: 'Mustafa' },
+  { id: 'u2', ad: 'Fatih' },
+  { id: 'u3', ad: 'Patrick' },
+];
+
+const urunId = new URLSearchParams(location.search).get('urun');
+const appEl = document.getElementById('app');
+
+async function loadProducts() {
+  try {
+    const snap = await getDoc(doc(collection(db, 'urunler'), 'liste'));
+    if (snap.exists() && snap.data().items) return snap.data().items;
+  } catch(e) {}
+  return [];
+}
+
+async function addToCart(userId, prod) {
+  const snap = await getDoc(doc(collection(db, 'sepetler'), userId));
+  let cart = (snap.exists() && snap.data().cart) ? snap.data().cart : [];
+  const existing = cart.find(i => i.id === prod.id && i.price === prod.price);
+  if (existing) existing.qty += 1;
+  else cart.push({ ...prod, qty: 1 });
+  await setDoc(doc(collection(db, 'sepetler'), userId), { cart, guncelleme: Date.now() });
+}
+
+async function init() {
+  if (!urunId) {
+    appEl.innerHTML = '<div class="error-msg">❌ Ürün ID bulunamadı</div>';
+    return;
+  }
+
+  const products = await loadProducts();
+  const prod = products.find(p => p.id === urunId);
+
+  if (!prod) {
+    appEl.innerHTML = `<div class="error-msg">❌ Ürün bulunamadı: ${urunId}</div>`;
+    return;
+  }
+
+  // Ürün bilgisini göster, kullanıcı seçtir
+  appEl.innerHTML = `
+    <div class="emoji">${prod.emoji || '📦'}</div>
+    <div class="prod-name">${prod.name}</div>
+    <div class="prod-price">€${Number(prod.price).toFixed(2)}</div>
+    <div class="status">Kim ekliyor?</div>
+    <div class="users">
+      ${USERS.map(u => `<button class="user-btn" data-uid="${u.id}">👤 ${u.ad}</button>`).join('')}
+    </div>
+  `;
+
+  document.querySelectorAll('.user-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const userId = btn.dataset.uid;
+      const userName = USERS.find(u => u.id === userId)?.ad;
+      appEl.innerHTML = `<div class="spinner"></div><div class="status">Ekleniyor...</div>`;
+      try {
+        await addToCart(userId, prod);
+        appEl.innerHTML = `
+          <div class="emoji">✅</div>
+          <div class="success">${prod.emoji} ${prod.name}<br>sepete eklendi</div>
+          <div class="status" style="margin-top:12px">${userName} · Satış uygulamasına dönün</div>
+        `;
+        // 2 saniye sonra kapat / geri git
+        setTimeout(() => {
+          if (window.history.length > 1) window.history.back();
+          else window.close();
+        }, 2000);
+      } catch(e) {
+        appEl.innerHTML = `<div class="error-msg">❌ Hata: ${e.message}</div>`;
+      }
+    });
+  });
+}
+
+init();
+</script>
+</body>
+</html>

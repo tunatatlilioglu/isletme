@@ -909,7 +909,7 @@ function renderQrGrid(prods) {
       const el = document.getElementById('qr-mini-' + p.id);
       if (el && !el.querySelector('canvas')) {
         // QR içine URL yaz — telefon kamerası okuyunca ürün otomatik açılır
-        const url = location.origin + location.pathname + '?urun=' + p.id;
+        const url = location.origin + '/isletme/ekle.html?urun=' + p.id;
         new QRCode(el, { text: url, width: 90, height: 90,
           colorDark: '#000', colorLight: '#fff',
           correctLevel: QRCode.CorrectLevel.M });
