@@ -1769,6 +1769,11 @@ Object.assign(window, {
 // PWA standalone modunda URL parametresi kaybolabiliyor
 (function() {
   const urunId = new URLSearchParams(location.search).get('urun');
+  const ssId = sessionStorage.getItem('pendingUrun');
+  // Debug — ne var görelim
+  setTimeout(() => {
+    showToast(`URL:${urunId || '—'} SS:${ssId || '—'}`);
+  }, 1000);
   if (urunId) {
     sessionStorage.setItem('pendingUrun', urunId);
     history.replaceState({}, '', location.pathname);
