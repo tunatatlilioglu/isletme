@@ -879,8 +879,22 @@ async function loadPinsFromFirebase() {
   try {
     const snap = await getDoc(doc(db, 'ayarlar', 'pinler'));
     if (snap.exists() && snap.data().users && snap.data().users.length) {
+      const saved = snap.data().users;
+      // Yalnızca Firebase'deki kullanıcı listesi daha fazlaysa veya PIN farklıysa güncelle
+      // Ama kod içindeki USERS_DEFAULT'tan gelen yeni PIN'ler varsa onları koru
       USERS.length = 0;
-      snap.data().users.forEach(u => USERS.push(u));
+      saved.forEach(u => USERS.push(u));
+      // USERS_DEFAULT'taki kullanıcıların PIN'leri Firebase'de eski değerdeyse güncelle
+      let changed = false;
+      USERS_DEFAULT.forEach(def => {
+        const fb = USERS.find(u => u.id === def.id);
+        if (fb && fb.pin !== def.pin) {
+          // Firebase'deki pin eski default'a eşitse yeni default'u yaz
+          const oldDefaults = ['111111','222222','333333','444444','555555'];
+          if (oldDefaults.includes(fb.pin)) { fb.pin = def.pin; changed = true; }
+        }
+      });
+      if (changed) savePinsToFirebase();
     }
   } catch(e) { console.warn('Kullanıcı yüklenemedi:', e); }
 }
@@ -1036,24 +1050,31 @@ function updatePinDots() {
 }
 
 function checkPin() {
-  const user = USERS.find(u => u.pin === pinBuffer);
-  if (user) {
-    currentUser = user;
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('userBadge').textContent = '👤 ' + user.ad;
-    pinBuffer = '';
-    updatePinDots();
-    // Yetki bazlı sekme görünürlüğü
-    applyRoleUI();
-    init();
-  } else {
-    // Hatalı PIN - titret
-    for (let i = 0; i < 6; i++) document.getElementById('dot' + i).classList.add('error');
-    document.getElementById('loginError').textContent = '❌ Hatalı PIN, tekrar deneyin';
-    setTimeout(() => {
+  // Firebase henüz bağlanmadıysa USERS_DEFAULT ile dene, bağlandıktan sonra tekrar dene
+  const doCheck = () => {
+    const user = USERS.find(u => u.pin === pinBuffer);
+    if (user) {
+      currentUser = user;
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('userBadge').textContent = '👤 ' + user.ad;
       pinBuffer = '';
       updatePinDots();
-    }, 800);
+      applyRoleUI();
+      init();
+    } else {
+      for (let i = 0; i < 6; i++) document.getElementById('dot' + i).classList.add('error');
+      document.getElementById('loginError').textContent = '❌ Hatalı PIN, tekrar deneyin';
+      setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 800);
+    }
+  };
+
+  // Firebase bağlıysa ve kullanıcılar yüklendiyse direkt kontrol et
+  // Değilse önce yükle, sonra kontrol et
+  const db = getDB();
+  if (db) {
+    loadPinsFromFirebase().then(doCheck);
+  } else {
+    doCheck();
   }
 }
 
