@@ -490,7 +490,7 @@ try {
   }
   .qr-card.selected { border-color: var(--accent); background: rgba(245,158,11,.08); }
   .qr-card svg { width: 100% !important; height: auto !important; }
-  .qr-card-name { font-size: 10px; font-weight: 700; margin-top: 4px; line-height: 1.3; }
+  .qr-card-name { font-size: 30px; font-weight: 700; margin-top: 4px; line-height: 1.3; }
   .qr-card-price { font-size: 11px; color: var(--accent); font-weight: 800; }
   @media print { .qr-card-price { display: none; } }
   .qr-card-check {
@@ -902,7 +902,7 @@ function printQrA4() {
     .grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; padding: 12px; }
     .item { border: 1px solid #ddd; border-radius: 8px; padding: 8px; text-align: center; break-inside: avoid; }
     .item img { width: 100%; max-width: 90px; }
-    .name { font-size: 9px; font-weight: 700; margin-top: 4px; line-height: 1.3; }
+    .name { font-size: 27px; font-weight: 700; margin-top: 4px; line-height: 1.3; }
     @page { size: A4; margin: 1cm; }
     @media print { body { -webkit-print-color-adjust: exact; } }
   </style>
@@ -930,7 +930,7 @@ function printQrEtiket() {
     .item { border: 1px solid #ccc; border-radius: 6px; padding: 6px; text-align: center;
       break-inside: avoid; width: 62mm; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .item img { width: 28mm; height: 28mm; }
-    .name { font-size: 7px; font-weight: 700; margin-top: 2px; line-height: 1.2; }
+    .name { font-size: 21px; font-weight: 700; margin-top: 2px; line-height: 1.2; }
     @page { size: A4; margin: 0.5cm; }
     @media print { body { -webkit-print-color-adjust: exact; } }
   </style>
