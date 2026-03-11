@@ -470,7 +470,19 @@ window._fbInit = function(cb) {
     color: var(--accent); cursor: pointer;
   }
 
-  /* QR card */
+  .cat-chip.sub-chip {
+    background: var(--surface2);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-size: 11px;
+    padding: 5px 12px;
+    opacity: .85;
+  }
+  .cat-chip.sub-chip.active {
+    background: var(--accent);
+    color: #000;
+    opacity: 1;
+  }
   .qr-card {
     background: var(--surface); border: 1.5px solid var(--border);
     border-radius: var(--radius); padding: 10px; text-align: center;
@@ -575,8 +587,6 @@ window._fbInit = function(cb) {
 
 <!-- ÜRÜNLER -->
 <div class="page active" id="page-urunler">
-  <div class="demo-badge">⚡ Demo — Örnek verilerle çalışıyor</div>
-
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
     <input type="text" id="searchInput" placeholder="Ürün ara..." oninput="filterProds()">
@@ -819,6 +829,10 @@ const PRODUCTS = [
   { id:'C012', name:'YSL', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C012' },
   { id:'C007', name:'Zarf', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C007' },
   { id:'C028', name:'Çocuk Grubu', cat:'Çanta', emoji:'👜', price:10, stock:99, qr:'C028' },
+  // 🧳 VALİZ
+  { id:'V001', name:'Küçük Valiz', cat:'Valiz', emoji:'🧳', price:25, stock:99, qr:'V001' },
+  { id:'V002', name:'Orta Valiz',  cat:'Valiz', emoji:'🧳', price:30, stock:99, qr:'V002' },
+  { id:'V003', name:'Büyük Valiz', cat:'Valiz', emoji:'🧳', price:40, stock:99, qr:'V003' },
   // 🔗 KEMER
   { id:'K002', name:'Deri Kemer', cat:'Kemer', emoji:'🔗', price:15, stock:99, qr:'K002' },
   { id:'K001', name:'Plastik Kemer', cat:'Kemer', emoji:'🔗', price:5, stock:99, qr:'K001' },
@@ -846,8 +860,8 @@ const PRODUCTS = [
 // ============ KULLANICI & PIN SİSTEMİ ============
 // YETKİLER: 'ortak' = tam yetki + ayarlar, 'admin' = tam yetki, 'satis' = sadece satış + kendi geçmişi
 const USERS_DEFAULT = [
-  { id: 'u1', ad: 'Mustafa',           pin: '111111', rol: 'ortak' },
-  { id: 'u2', ad: 'Fatih',             pin: '222222', rol: 'ortak' },
+  { id: 'u1', ad: 'Mustafa',           pin: '123456', rol: 'ortak' },
+  { id: 'u2', ad: 'Fatih',             pin: '654321', rol: 'ortak' },
   { id: 'u3', ad: 'Satışçı 1',         pin: '333333', rol: 'admin' },
   { id: 'u4', ad: 'Satışçı 2',         pin: '444444', rol: 'admin' },
   { id: 'u5', ad: 'Satış Temsilcisi',  pin: '555555', rol: 'satis' },
@@ -1406,17 +1420,45 @@ function init() {
 }
 
 // ============ CATEGORIES ============
+let activeSubCat = ''; // aktif alt kategori
+
 function renderCats() {
-  // Top-level cats (before ›)
   const allCats = PRODUCTS.map(p => p.cat.split(' › ')[0]);
-  const cats = ['Tümü', ...new Set(allCats)];
-  document.getElementById('catChips').innerHTML = cats.map(c =>
-    `<button class="cat-chip ${c===activecat?'active':''}" onclick="filterCat('${c}')">${c}</button>`
+  const topCats = ['Tümü', ...new Set(allCats)];
+
+  // Seçili ana kategorinin alt kategorileri
+  const subCats = activecat === 'Tümü' ? [] :
+    [...new Set(
+      PRODUCTS
+        .filter(p => p.cat.startsWith(activecat + ' ›'))
+        .map(p => p.cat.split(' › ')[1])
+    )];
+
+  let html = topCats.map(c =>
+    `<button class="cat-chip ${c === activecat ? 'active' : ''}" onclick="filterCat('${c}')">${c}</button>`
   ).join('');
+
+  // Alt kategoriler varsa ikinci satır göster
+  if (subCats.length) {
+    html += `<div style="width:100%;height:0;flex-basis:100%"></div>`;
+    html += `<button class="cat-chip sub-chip ${activeSubCat === '' ? 'active' : ''}" onclick="filterSubCat('')">Tümü</button>`;
+    html += subCats.map(s =>
+      `<button class="cat-chip sub-chip ${activeSubCat === s ? 'active' : ''}" onclick="filterSubCat('${s}')">${s}</button>`
+    ).join('');
+  }
+
+  document.getElementById('catChips').innerHTML = html;
 }
 
 function filterCat(cat) {
   activecat = cat;
+  activeSubCat = '';
+  renderCats();
+  filterProds();
+}
+
+function filterSubCat(sub) {
+  activeSubCat = sub;
   renderCats();
   filterProds();
 }
@@ -1424,12 +1466,16 @@ function filterCat(cat) {
 // ============ PRODUCTS ============
 function filterProds() {
   const q = document.getElementById('searchInput').value.toLowerCase();
-  const filtered = PRODUCTS.filter(p =>
-    (activecat === 'Tümü' || p.cat === activecat || p.cat.startsWith(activecat + ' ›')) &&
-    (!q || p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || p.cat.toLowerCase().includes(q))
-  );
+  const filtered = PRODUCTS.filter(p => {
+    const topMatch = activecat === 'Tümü' || p.cat === activecat || p.cat.startsWith(activecat + ' ›');
+    const subMatch = !activeSubCat || p.cat === activecat + ' › ' + activeSubCat;
+    const qMatch = !q || p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || p.cat.toLowerCase().includes(q);
+    return topMatch && subMatch && qMatch;
+  }).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
   renderProds(filtered);
 }
+
+let expandedGroups = new Set(); // hangi alt gruplar açık
 
 function renderProds(prods = PRODUCTS) {
   const grid = document.getElementById('prodGrid');
@@ -1437,20 +1483,87 @@ function renderProds(prods = PRODUCTS) {
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3)">Ürün bulunamadı</div>`;
     return;
   }
-  grid.innerHTML = prods.map(p => {
-    const stockClass = p.stock === 0 ? 'stock-out' : p.stock <= 3 ? 'stock-low' : 'stock-ok';
-    const stockLabel = p.stock === 0 ? 'Tükendi' : p.stock <= 3 ? `Son ${p.stock}` : `${p.stock} adet`;
-    const subcat = p.cat.includes('›') ? p.cat.split('› ')[1] : '';
-    return `<div class="prod-card ${p.stock===0?'out-of-stock':''}" onclick="openProdModal('${p.id}')">
-      <span class="prod-emoji">${p.emoji}</span>
-      <div class="prod-name">${p.name}</div>
-      <div class="prod-code">${subcat ? `<span style="background:rgba(245,158,11,.15);color:var(--accent);padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700">${subcat}</span> ` : ''}#${p.id}</div>
-      <div class="prod-footer">
-        <span class="prod-price">€${fmt(p.price)}</span>
-        <span class="prod-stock ${stockClass}">${stockLabel}</span>
-      </div>
-    </div>`;
+
+  // Alt kategorisi olanları grupla, olmayanları direkt göster
+  // Önce sıralama: ana kategori → alt kategori → ad
+  const groups = {}; // 'Çanta › Chanel' → [ürünler]
+  const singles = []; // alt kategorisi olmayanlar
+
+  prods.forEach(p => {
+    if (p.cat.includes('›')) {
+      const key = p.cat; // örn: 'Çanta › Chanel'
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(p);
+    } else {
+      singles.push(p);
+    }
+  });
+
+  // Grupları tek kart olarak, tekil ürünleri normal kart olarak render et
+  // Grup anahtarlarını ana kategori bazında tek yerde göster
+  // singles içine grup kartlarını da ekle, sonra birlikte sırala
+  const items = [];
+
+  // Grup kartları
+  Object.entries(groups).forEach(([key, urunler]) => {
+    urunler.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+    const subName = key.split(' › ')[1]; // 'Chanel', 'Totebag'
+    const emoji = urunler[0].emoji;
+    const isOpen = expandedGroups.has(key);
+    items.push({ type: 'group', key, subName, emoji, urunler, isOpen });
+  });
+
+  // Tekil ürünler
+  singles.forEach(p => items.push({ type: 'single', p }));
+
+  grid.innerHTML = items.map(item => {
+    if (item.type === 'group') {
+      const { key, subName, emoji, urunler, isOpen } = item;
+      const minFiyat = Math.min(...urunler.map(u => u.price));
+      const maxFiyat = Math.max(...urunler.map(u => u.price));
+      const fiyatStr = minFiyat === maxFiyat ? `€${fmt(minFiyat)}` : `€${fmt(minFiyat)}–${fmt(maxFiyat)}`;
+      const safeKey = key.replace(/[^a-zA-Z0-9]/g, '_');
+
+      let html = `<div style="grid-column:1/-1">
+        <div class="prod-card" style="display:flex;align-items:center;gap:12px;padding:14px 16px" onclick="toggleGroup('${key}')">
+          <span style="font-size:26px">${emoji}</span>
+          <div style="flex:1">
+            <div class="prod-name" style="font-size:14px">${subName}</div>
+            <div class="prod-code">${urunler.length} ürün · ${fiyatStr}</div>
+          </div>
+          <span style="font-size:18px;color:var(--accent);transition:.2s;transform:rotate(${isOpen?'90':'0'}deg)">›</span>
+        </div>`;
+
+      if (isOpen) {
+        html += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;padding-left:8px;border-left:3px solid var(--accent)">
+          ${urunler.map(p => `
+            <div class="prod-card" onclick="openProdModal('${p.id}')">
+              <span class="prod-emoji">${p.emoji}</span>
+              <div class="prod-name">${p.name}</div>
+              <div class="prod-code">#${p.id}</div>
+              <div class="prod-footer"><span class="prod-price">€${fmt(p.price)}</span></div>
+            </div>`).join('')}
+        </div>`;
+      }
+
+      html += `</div>`;
+      return html;
+    } else {
+      const p = item.p;
+      return `<div class="prod-card" onclick="openProdModal('${p.id}')">
+        <span class="prod-emoji">${p.emoji}</span>
+        <div class="prod-name">${p.name}</div>
+        <div class="prod-code">#${p.id}</div>
+        <div class="prod-footer"><span class="prod-price">€${fmt(p.price)}</span></div>
+      </div>`;
+    }
   }).join('');
+}
+
+function toggleGroup(key) {
+  if (expandedGroups.has(key)) expandedGroups.delete(key);
+  else expandedGroups.add(key);
+  filterProds();
 }
 
 // ============ PRODUCT MODAL ============

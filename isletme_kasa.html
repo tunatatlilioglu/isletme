@@ -503,6 +503,7 @@ tbody tr:last-child td { border-bottom: none; }
     <button class="nav-tab active" onclick="showPage('kasa')">💰 <span class="label">Kasa</span></button>
     <button class="nav-tab" onclick="showPage('toptanci')">🏭 <span class="label">Toptancılar</span></button>
     <button class="nav-tab" onclick="showPage('gider')">📋 <span class="label">Giderler</span></button>
+    <button class="nav-tab" onclick="showPage('gecmis-borc')">🕰 <span class="label">Geçmiş Borç</span></button>
     <button class="nav-tab" onclick="showPage('ozet')">📊 <span class="label">Özet</span></button>
     <button class="nav-tab" onclick="showPage('rapor')">📅 <span class="label">Rapor</span></button>
     <button class="nav-tab" onclick="showPage('ortaklar')">🤝 <span class="label">Ortaklar</span></button>
@@ -667,6 +668,83 @@ tbody tr:last-child td { border-bottom: none; }
     </div>
   </div>
 </div>
+
+<!-- ========== GEÇMİŞ BORÇ ========== -->
+<div class="page" id="page-gecmis-borc">
+
+  <!-- Özet kartı -->
+  <div class="stat-grid" style="margin-bottom:16px">
+    <div class="stat-card red" style="grid-column:1/-1">
+      <div class="stat-icon">🕰</div>
+      <div class="stat-label">Toplam Geçmiş Borç</div>
+      <div class="stat-value red" id="gecmisBorcToplam">0,00</div>
+      <div class="stat-sub" id="gecmisBorcParaBirimi">—</div>
+    </div>
+  </div>
+
+  <!-- Yeni kayıt ekle -->
+  <div class="card section-gap">
+    <div class="card-title">➕ Borç Kalemi Ekle</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Açıklama</label>
+        <input type="text" id="gbAciklama" placeholder="Kime, neden, hangi dönem...">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group fixed" style="min-width:110px">
+        <label>Para Birimi</label>
+        <select id="gbPara">
+          <option value="EUR">€ EUR</option>
+          <option value="TL">₺ TL</option>
+          <option value="USD">$ USD</option>
+          <option value="GBP">£ GBP</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tutar</label>
+        <input type="number" id="gbTutar" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-group fixed" style="min-width:140px">
+        <label>Tarih</label>
+        <input type="date" id="gbTarih">
+      </div>
+    </div>
+    <div class="form-row">
+      <button class="btn btn-primary" onclick="gbEkle()">+ Ekle</button>
+    </div>
+  </div>
+
+  <!-- Liste -->
+  <div class="card">
+    <div class="card-title" style="justify-content:space-between">
+      📋 Borç Kalemleri
+      <select id="gbFilterPara" onchange="renderGecmisBorc()" style="font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface)">
+        <option value="">Tümü</option>
+        <option value="EUR">EUR</option>
+        <option value="TL">TL</option>
+        <option value="USD">USD</option>
+        <option value="GBP">GBP</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Açıklama</th>
+            <th>Tutar</th>
+            <th>Para</th>
+            <th>Durum</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="gecmisBorcTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <div class="page" id="page-toptanci">
   <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
     <button class="btn btn-primary" onclick="openToptanciModal()">+ Toptancı Ekle</button>
@@ -1225,8 +1303,8 @@ tbody tr:last-child td { border-bottom: none; }
 // ===== PIN & KULLANICI SİSTEMİ =====
 // Kasa modülü: sadece tam yetkili kullanıcılar
 const KASA_USERS = [
-  { id: 'u1', ad: 'Ortak 1', pin: '111111' },
-  { id: 'u2', ad: 'Ortak 2', pin: '222222' },
+  { id: 'u1', ad: 'Mustafa', pin: '123456' },
+  { id: 'u2', ad: 'Fatih',   pin: '654321' },
 ];
 
 let kasaCurrentUser = null;
@@ -1291,7 +1369,8 @@ let state = {
     { id: 'o1', ad: 'Mustafa' },
     { id: 'o2', ad: 'Fatih' }
   ],
-  ortakIslemler: []
+  ortakIslemler: [],
+  gecmisBorc: []
 };
 let kurlar = { USD: 0, EUR: 0, GBP: 0, RUB: 0, updated: null };
 let _saveTimeout = null;
@@ -1365,6 +1444,7 @@ function listenFirebase() {
       if (data.giderler) state.giderler = data.giderler;
       if (data.ortaklar) state.ortaklar = data.ortaklar;
       if (data.ortakIslemler) state.ortakIslemler = data.ortakIslemler;
+      if (data.gecmisBorc) state.gecmisBorc = data.gecmisBorc;
       renderKasa(); renderStats(); renderToptanciKartlar();
       renderToptanciIslemler(); renderToptanciFilter();
       renderGider(); renderGiderStats();
@@ -1654,6 +1734,79 @@ async function satisSil(id) {
     showToast('Silinemedi', 'error');
   }
 }
+// ===== GEÇMİŞ BORÇ =====
+function gbEkle() {
+  const aciklama = document.getElementById('gbAciklama').value.trim();
+  const para = document.getElementById('gbPara').value;
+  const tutar = parseFloat(document.getElementById('gbTutar').value);
+  const tarih = document.getElementById('gbTarih').value;
+
+  if (!aciklama) { showToast('Açıklama girin', 'error'); return; }
+  if (!tutar || tutar <= 0) { showToast('Geçerli tutar girin', 'error'); return; }
+  if (!tarih) { showToast('Tarih seçin', 'error'); return; }
+
+  if (!state.gecmisBorc) state.gecmisBorc = [];
+  state.gecmisBorc.push({ id: Date.now(), aciklama, para, tutar, tarih, odendi: false });
+  state.gecmisBorc.sort((a,b) => b.tarih.localeCompare(a.tarih));
+  save();
+
+  document.getElementById('gbAciklama').value = '';
+  document.getElementById('gbTutar').value = '';
+  renderGecmisBorc();
+  showToast('Borç kalemi eklendi ✓');
+}
+
+function gbOdendi(id) {
+  const item = state.gecmisBorc.find(x => x.id === id);
+  if (!item) return;
+  item.odendi = !item.odendi;
+  save();
+  renderGecmisBorc();
+}
+
+function gbSil(id) {
+  if (!confirm('Bu borç kalemini silmek istiyor musunuz?')) return;
+  state.gecmisBorc = state.gecmisBorc.filter(x => x.id !== id);
+  save();
+  renderGecmisBorc();
+  showToast('Silindi');
+}
+
+function renderGecmisBorc() {
+  if (!state.gecmisBorc) state.gecmisBorc = [];
+  const filter = document.getElementById('gbFilterPara')?.value || '';
+  const rows = filter ? state.gecmisBorc.filter(x => x.para === filter) : state.gecmisBorc;
+
+  const sym = {EUR:'€', TL:'₺', USD:'$', GBP:'£'};
+
+  // Ödenmemiş toplamlar para birimlerine göre
+  const toplamlar = {};
+  state.gecmisBorc.filter(x => !x.odendi).forEach(x => {
+    toplamlar[x.para] = (toplamlar[x.para] || 0) + x.tutar;
+  });
+  const toplamStr = Object.entries(toplamlar).map(([p,t]) => `${sym[p]||''}${fmt(t)} ${p}`).join(' + ') || '—';
+  document.getElementById('gecmisBorcToplam').textContent = toplamStr;
+  document.getElementById('gecmisBorcParaBirimi').textContent = 'Ödenmemiş toplam';
+
+  const tbody = document.getElementById('gecmisBorcTable');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="icon">🕰</div><p>Geçmiş borç kaydı yok</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(x => `<tr style="${x.odendi ? 'opacity:.45;' : ''}">
+    <td>${formatDate(x.tarih)}</td>
+    <td style="color:var(--text2)">${x.aciklama}</td>
+    <td class="${x.odendi ? '' : 'amount-neg'}" style="font-weight:800">${sym[x.para]||''}${fmt(x.tutar)}</td>
+    <td><span class="badge badge-blue">${x.para}</span></td>
+    <td>
+      <button onclick="gbOdendi(${x.id})" style="background:${x.odendi ? 'rgba(16,185,129,.15)' : 'rgba(245,158,11,.12)'};border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700;color:${x.odendi ? 'var(--green)' : 'var(--accent)'}">
+        ${x.odendi ? '✅ Ödendi' : '⏳ Bekliyor'}
+      </button>
+    </td>
+    <td><button class="btn btn-danger btn-icon btn-sm" onclick="gbSil(${x.id})">🗑</button></td>
+  </tr>`).join('');
+}
+
 function openToptanciModal() {
   ['toptanciAdi','toptanciTel','toptanciNot'].forEach(id => document.getElementById(id).value = '');
   openModal('toptanciModal');
@@ -2716,6 +2869,7 @@ function showPage(name) {
   if (name === 'rapor') renderRapor();
   if (name === 'ortaklar') renderOrtakSayfasi();
   if (name === 'karzarar') renderKarZarar();
+  if (name === 'gecmis-borc') renderGecmisBorc();
 }
 
 // ===== MODAL =====
@@ -2746,11 +2900,13 @@ function init() {
   const today = todayStr();
   document.getElementById('kasaTarih').value = today;
   document.getElementById('giderTarih').value = today;
+  document.getElementById('gbTarih').value = today;
   updateKasaKur();
   renderKurBar();
   renderKasa();
   renderStats();
   renderOzet();
+  renderGecmisBorc();
   renderToptanciKartlar();
   renderToptanciIslemler();
   renderToptanciFilter();
