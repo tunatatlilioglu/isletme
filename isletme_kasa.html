@@ -837,6 +837,12 @@ tbody tr:last-child td { border-bottom: none; }
         <label>Tarih</label>
         <input type="date" id="giderTarih">
       </div>
+      <div class="form-group fixed" style="min-width:130px">
+        <label>👤 Kimin Adına</label>
+        <select id="giderOrtak">
+          <option value="">— İşletme Gideri —</option>
+        </select>
+      </div>
       <div class="form-group fixed" style="min-width:100px">
         <label>&nbsp;</label>
         <button class="btn btn-primary" onclick="giderEkle()">+ Ekle</button>
@@ -862,7 +868,7 @@ tbody tr:last-child td { border-bottom: none; }
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Tarih</th><th>Tür</th><th>Tutar</th><th>Para</th><th>Açıklama</th><th></th></tr>
+          <tr><th>Tarih</th><th>Tür</th><th>Tutar</th><th>Para</th><th>Açıklama</th><th>Ortak</th><th></th></tr>
         </thead>
         <tbody id="giderTable"></tbody>
       </table>
@@ -2313,43 +2319,81 @@ function dayDiff(from, to) {
 }
 
 // ===== GİDER =====
+function giderOrtakDropdownDoldur() {
+  const sel = document.getElementById('giderOrtak');
+  if (!sel) return;
+  const mevcut = sel.value;
+  sel.innerHTML = '<option value="">— İşletme Gideri —</option>' +
+    state.ortaklar.map(o => `<option value="${o.id}">${o.ad}</option>`).join('');
+  sel.value = mevcut;
+}
+
 function giderEkle() {
   const tur = document.getElementById('giderTur').value;
   const para = document.getElementById('giderPara').value;
   const tutar = parseFloat(document.getElementById('giderTutar').value);
   const aciklama = document.getElementById('giderAciklama').value.trim();
   const tarih = document.getElementById('giderTarih').value;
+  const ortakId = document.getElementById('giderOrtak')?.value || '';
   if (!tutar || tutar <= 0) { showToast('Geçerli tutar girin', 'error'); return; }
   if (!tarih) { showToast('Tarih seçin', 'error'); return; }
-  state.giderler.push({ id: Date.now(), tur, para: para||'TL', tutar, aciklama, tarih });
+
+  const giderId = Date.now();
+  state.giderler.push({ id: giderId, tur, para: para||'TL', tutar, aciklama, tarih, ortakId: ortakId||null });
   state.giderler.sort((a,b) => b.tarih.localeCompare(a.tarih));
+
+  // Ortak seçildiyse ortakIslemler'e kisisel_borc olarak da ekle
+  if (ortakId) {
+    const kur = para === 'TL' ? 1 : (kurlar[para] || 1);
+    state.ortakIslemler.push({
+      id: giderId + 1,
+      ortakId,
+      tur: 'kisisel_borc',
+      para: para || 'TL',
+      tutar,
+      kur,
+      aciklama: `[Gider] ${tur}${aciklama ? ' — ' + aciklama : ''}`,
+      tarih,
+      giderRef: giderId  // giderle bağlantı
+    });
+    state.ortakIslemler.sort((a,b) => b.tarih.localeCompare(a.tarih));
+  }
+
   save();
   document.getElementById('giderTutar').value = '';
   document.getElementById('giderAciklama').value = '';
   renderGider(); renderGiderStats(); renderOzet();
-  showToast('Gider eklendi ✓');
+  renderOrtakBakiyeKartlar(); renderOrtakIslemler();
+  showToast(ortakId ? `Gider eklendi — ${state.ortaklar.find(o=>o.id===ortakId)?.ad} adına borç kaydedildi ✓` : 'Gider eklendi ✓');
 }
 
 function giderSil(id) {
   if (!confirm('Bu gideri silmek istiyor musunuz?')) return;
   state.giderler = state.giderler.filter(g => g.id !== id);
+  // Bağlı ortakIslem varsa onu da sil
+  state.ortakIslemler = state.ortakIslemler.filter(i => i.giderRef !== id);
   save(); renderGider(); renderGiderStats(); renderOzet();
+  renderOrtakBakiyeKartlar(); renderOrtakIslemler();
   showToast('Silindi');
 }
 
 function renderGider() {
   const tbody = document.getElementById('giderTable');
-  if (!state.giderler.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="icon">📋</div><p>Henüz gider kaydı yok</p></div></td></tr>`; return; }
-  const turEmoji = { Mustafa:'👤',Fatih:'👤',Muhasebe:'📑',Gün:'📅',Market:'🛒',Kira:'🏠',Elektrik:'💡',Su:'💧','Doğalgaz':'🔥','İnternet':'📶',Personel:'👥',Vergi:'🧾',Nakliye:'🚚','Diğer':'📌' };
+  if (!state.giderler.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="icon">📋</div><p>Henüz gider kaydı yok</p></div></td></tr>`; return; }
+  const turEmoji = { Muhasebe:'📑',Gün:'📅',Market:'🛒',Kira:'🏠',Elektrik:'💡',Su:'💧','Doğalgaz':'🔥','İnternet':'📶',Personel:'👥',Vergi:'🧾',Nakliye:'🚚','Diğer':'📌' };
   const sym = {EUR:'€',TL:'₺',USD:'$',GBP:'£'};
-  tbody.innerHTML = state.giderler.map(g => `<tr>
+  tbody.innerHTML = state.giderler.map(g => {
+    const ortak = g.ortakId ? state.ortaklar.find(o => o.id === g.ortakId) : null;
+    return `<tr>
     <td>${formatDate(g.tarih)}</td>
     <td><span class="badge badge-yellow">${turEmoji[g.tur]||'📌'} ${g.tur}</span></td>
     <td class="amount-neg">−${fmt(g.tutar)}</td>
     <td><span class="badge badge-blue">${g.para||'TL'}</span></td>
     <td style="color:var(--text2)">${g.aciklama||'—'}</td>
+    <td>${ortak ? `<span class="badge badge-purple" style="background:rgba(139,92,246,.15);color:#8b5cf6">👤 ${ortak.ad}</span>` : '<span style="color:var(--text3);font-size:11px">İşletme</span>'}</td>
     <td><button class="btn btn-danger btn-icon btn-sm" onclick="giderSil(${g.id})">🗑</button></td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 }
 
 function renderGiderStats() {
@@ -3532,6 +3576,7 @@ function init() {
   renderToptanciFilter();
   renderGider();
   renderGiderStats();
+  giderOrtakDropdownDoldur();
   renderOrtakFilter();
   updateOrtakKur();
   document.getElementById('ortakTarih').value = todayStr();
@@ -3549,7 +3594,7 @@ Object.assign(window, {
   openIslemModal, islemEkle, islemSil, islemTurDegisti, odemeYontemiDegisti,
   openEskiBorcModal, eskiBorcEkle, eskiBorcSil, toggleEskiBorcDetay,
   renderToptanciIslemler,
-  giderEkle, giderSil,
+  giderEkle, giderSil, giderOrtakDropdownDoldur,
   openPrintPanel, closePrintPanel, printRapor, setRaporDon, renderRapor,
   backupData, restoreData,
   openOrtakModal, ortakEkle, ortakIslemEkle, ortakIslemSil, renderOrtakSayfasi,
