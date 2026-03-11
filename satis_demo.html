@@ -1762,13 +1762,12 @@ async function satisSil(id) {
   if (!confirm('Bu satışı silmek istiyor musunuz?')) return;
   const db = getDB();
   if (!db) { showToast('Bağlantı yok'); return; }
-  const { doc, deleteDoc, collection } = window._fb;
   try {
-    await deleteDoc(doc(collection(db, 'satislar'), String(id)));
+    await db.collection('satislar').doc(String(id)).delete();
     showToast('Satış silindi');
   } catch(e) {
     console.error(e);
-    showToast('Silinemedi');
+    showToast('Silinemedi: ' + e.message);
   }
 }
 
