@@ -153,26 +153,29 @@ async function addToCart(userId) {
 }
 
 window.secimiYap = async function(userId, userName) {
-  // Kullanıcıyı hatırla
   sessionStorage.setItem('ekleUserId', userId);
   sessionStorage.setItem('ekleUserName', userName);
   appEl.innerHTML = `<div class="spinner"></div><div class="status">Ekleniyor...</div>`;
   try {
     await addToCart(userId);
+    // Doğrulama: Firebase'den geri oku
+    const snap = await getDoc(doc(collection(db, 'sepetler'), userId));
+    const sepetUrunSayisi = snap.exists() ? (snap.data().cart || []).reduce((s,i)=>s+i.qty,0) : 0;
     appEl.innerHTML = `
       <div class="emoji">✅</div>
       <div class="success">${prod.emoji} ${prod.name}<br>sepete eklendi</div>
-      <div class="status" style="margin-top:8px">${userName}</div>
+      <div class="status" style="margin-top:8px">${userName} · Firebase'de toplam: ${sepetUrunSayisi} ürün</div>
       <div style="display:flex;flex-direction:column;gap:12px;margin-top:28px;width:100%;max-width:280px">
-        <button onclick="window.location.href='https://tunatatlilioglu.github.io/isletme/satis_demo.html'"
-          style="padding:16px;border-radius:14px;border:none;background:#10b981;color:#fff;font-size:16px;font-weight:800;cursor:pointer">
-          🛒 Sepete Git
-        </button>
-        <button onclick="window.history.back()"
+        <a href="https://tunatatlilioglu.github.io/isletme/satis_demo.html"
+          style="padding:16px;border-radius:14px;border:none;background:#10b981;color:#fff;font-size:16px;font-weight:800;cursor:pointer;text-decoration:none;text-align:center;display:block">
+          🛒 Sepete Git (${sepetUrunSayisi} ürün)
+        </a>
+        <button onclick="sessionStorage.removeItem('ekleUserId');sessionStorage.removeItem('ekleUserName');window.location.reload()"
           style="padding:16px;border-radius:14px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;font-weight:800;cursor:pointer">
-          📷 Başka Ürün Ekle
+          👤 Satıcı Değiştir
         </button>
       </div>
+      <div style="margin-top:16px;font-size:12px;color:#666">Başka ürün eklemek için telefon kamerasıyla yeni QR okutun</div>
     `;
   } catch(e) {
     appEl.innerHTML = `<div class="error-msg">❌ Hata: ${e.message}<br><small style="color:#666">${e.code || ''}</small></div>`;

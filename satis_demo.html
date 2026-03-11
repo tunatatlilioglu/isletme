@@ -1761,6 +1761,8 @@ function showTab(name, btn) {
   btn.classList.add('active');
   if (name === 'qr') renderQrPage();
   if (name === 'urun-yonetim') renderUrunYonetim();
+  // Sepet sekmesine geçince Firebase'den taze çek
+  if (name === 'sepet' && currentUser) listenCartFromFirebase();
 }
 
 // ============ UTILS ============
