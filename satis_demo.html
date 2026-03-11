@@ -881,21 +881,16 @@ const MASTER_KOD = 'tuna2015';
 async function loadPinsFromFirebase() {
   const db = getDB();
   if (!db) return;
-  const { doc, getDoc } = window._fb;
   try {
-    const snap = await getDoc(doc(db, 'ayarlar', 'pinler'));
-    if (snap.exists() && snap.data().users && snap.data().users.length) {
+    const snap = await db.collection('ayarlar').doc('pinler').get();
+    if (snap.exists && snap.data().users && snap.data().users.length) {
       const saved = snap.data().users;
-      // Yalnızca Firebase'deki kullanıcı listesi daha fazlaysa veya PIN farklıysa güncelle
-      // Ama kod içindeki USERS_DEFAULT'tan gelen yeni PIN'ler varsa onları koru
       USERS.length = 0;
       saved.forEach(u => USERS.push(u));
-      // USERS_DEFAULT'taki kullanıcıların PIN'leri Firebase'de eski değerdeyse güncelle
       let changed = false;
       USERS_DEFAULT.forEach(def => {
         const fb = USERS.find(u => u.id === def.id);
         if (fb && fb.pin !== def.pin) {
-          // Firebase'deki pin eski default'a eşitse yeni default'u yaz
           const oldDefaults = ['111111','222222','333333','444444','555555'];
           if (oldDefaults.includes(fb.pin)) { fb.pin = def.pin; changed = true; }
         }
@@ -908,9 +903,8 @@ async function loadPinsFromFirebase() {
 async function savePinsToFirebase() {
   const db = getDB();
   if (!db) return;
-  const { doc, setDoc } = window._fb;
   try {
-    await setDoc(doc(db, 'ayarlar', 'pinler'), { users: USERS });
+    await db.collection('ayarlar').doc('pinler').set({ users: USERS });
   } catch(e) { console.warn('Kullanıcı kaydedilemedi:', e); }
 }
 
@@ -1290,20 +1284,18 @@ function urunSil(id) {
 
 async function saveProductsToFirebase() {
   const db = getDB();
-  if (!db) { return; }
-  const { doc, setDoc } = window._fb;
+  if (!db) return;
   try {
-    await setDoc(doc(db, 'urunler', 'liste'), { products: PRODUCTS });
+    await db.collection('urunler').doc('liste').set({ products: PRODUCTS });
   } catch(e) { console.warn('Ürün kayıt hatası:', e); }
 }
 
 async function loadProductsFromFirebase() {
   const db = getDB();
   if (!db) return;
-  const { doc, getDoc } = window._fb;
   try {
-    const snap = await getDoc(doc(db, 'urunler', 'liste'));
-    if (snap.exists() && snap.data().products?.length) {
+    const snap = await db.collection('urunler').doc('liste').get();
+    if (snap.exists && snap.data().products?.length) {
       PRODUCTS.length = 0;
       snap.data().products.forEach(p => PRODUCTS.push(p));
       renderCats(); renderProds();
@@ -1370,7 +1362,6 @@ function getDB() {
 }
 
 async function saveSaleToFirebase(sale) {
-  // Firebase hazır değilse kısa süre bekle
   let db = getDB();
   if (!db) {
     let tries = 0;
@@ -1383,7 +1374,6 @@ async function saveSaleToFirebase(sale) {
   }
 
   if (!db) {
-    // Fallback localStorage
     const history = JSON.parse(localStorage.getItem('satis_demo_history') || '[]');
     history.unshift(sale);
     localStorage.setItem('satis_demo_history', JSON.stringify(history));
@@ -1391,9 +1381,7 @@ async function saveSaleToFirebase(sale) {
     return;
   }
 
-  // Sadece satislar koleksiyonuna yaz — kasa modülü oradan dinler
-  const { doc, setDoc, collection } = window._fb;
-  await setDoc(doc(collection(db, 'satislar'), String(sale.id)), sale);
+  await db.collection('satislar').doc(String(sale.id)).set(sale);
 }
 
 function listenSales() {
@@ -1403,9 +1391,8 @@ function listenSales() {
     renderHistory(); renderStats();
     return;
   }
-  const { collection, query, orderBy, onSnapshot } = window._fb;
-  const q = query(collection(db, 'satislar'), orderBy('id', 'desc'));
-  onSnapshot(q, (snap) => {
+  const q = db.collection('satislar').orderBy('id', 'desc');
+  q.onSnapshot((snap) => {
     salesHistory = snap.docs.map(d => d.data());
     renderHistory();
     renderStats();

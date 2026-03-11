@@ -1560,8 +1560,7 @@ function save() {
     }
     showSyncStatus('saving');
     try {
-      const { doc, setDoc } = window._fb;
-      await setDoc(doc(db, 'isletme_kasa', 'state'), JSON.parse(JSON.stringify(state)));
+      await db.collection('isletme_kasa').doc('state').set(JSON.parse(JSON.stringify(state)));
       showSyncStatus('saved');
       setTimeout(() => showSyncStatus('live'), 2000);
     } catch(e) {
@@ -1597,8 +1596,8 @@ function listenFirebase() {
   const { doc, onSnapshot, collection, query, orderBy } = window._fb;
 
   // Kasa state dinle
-  onSnapshot(doc(db, 'isletme_kasa', 'state'), (snap) => {
-    if (snap.exists()) {
+  db.collection('isletme_kasa').doc('state').onSnapshot((snap) => {
+    if (snap.exists) {
       const data = snap.data();
       if (data.kasa) state.kasa = data.kasa;
       if (data.toptancilar) state.toptancilar = data.toptancilar;
@@ -1619,9 +1618,8 @@ function listenFirebase() {
     showSyncStatus('offline');
   });
 
-  // Satışlar koleksiyonunu dinle — kasa hareketleriyle birleştir
-  const q = query(collection(db, 'satislar'), orderBy('id', 'desc'));
-  onSnapshot(q, (snap) => {
+  // Satışlar koleksiyonunu dinle
+  db.collection('satislar').orderBy('id', 'desc').onSnapshot((snap) => {
     satislarCache = snap.docs.map(d => d.data());
     renderKasaSatislar();
     renderStats();
