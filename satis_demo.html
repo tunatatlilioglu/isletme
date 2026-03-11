@@ -809,6 +809,9 @@ function selectUser(userId) {
   document.getElementById('userBadge').textContent = '👤 ' + user.ad;
   applyRoleUI();
   init();
+  // Yükleniyor göster
+  const cartEl = document.getElementById('cartContent');
+  if (cartEl) cartEl.innerHTML = `<div class="cart-empty"><div class="icon">⏳</div><p>Sepet yükleniyor...</p></div>`;
   // Sepeti Firebase'den yükle ve dinle
   loadCartFromFirebase().then(() => {
     // Sepette ürün varsa sepet sekmesine geç
@@ -1361,9 +1364,15 @@ function listenCartFromFirebase() {
 }
 
 async function loadCartFromFirebase() {
+  // Firebase hazır olana kadar bekle (max 5 saniye)
+  let waited = 0;
+  while ((!window._fb || !window._fb.db) && waited < 5000) {
+    await new Promise(r => setTimeout(r, 200));
+    waited += 200;
+  }
   listenCartFromFirebase();
-  // İlk yükleme için kısa bekleme
-  await new Promise(r => setTimeout(r, 800));
+  // Snapshot'ın gelmesi için bekle
+  await new Promise(r => setTimeout(r, 1500));
 }
 
 
