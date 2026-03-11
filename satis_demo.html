@@ -731,6 +731,7 @@ try {
   <div class="scanner-line"></div>
   <div class="scanner-hint">Ürünün QR kodunu çerçeve içine getirin</div>
   <div class="scanner-result" id="scannerResult"></div>
+  <div id="scannerDebug" style="position:absolute;bottom:60px;left:0;right:0;text-align:center;color:#fff;font-size:11px;background:rgba(0,0,0,.5);padding:4px;z-index:10"></div>
 </div>
 
 <!-- PRODUCT DETAIL MODAL -->
@@ -1802,24 +1803,33 @@ function openScanner() {
 function scanFrame() {
   const video = document.getElementById('scannerVideo');
   const canvas = document.getElementById('scannerCanvas');
+  const dbg = document.getElementById('scannerDebug');
   if (!video || !canvas) return;
-  if (video.readyState < 2) return; // HAVE_CURRENT_DATA veya üstü
+  if (video.readyState < 2) {
+    if (dbg) dbg.textContent = 'Video hazırlanıyor... (state:' + video.readyState + ')';
+    return;
+  }
   const w = video.videoWidth;
   const h = video.videoHeight;
-  if (!w || !h) return;
+  if (!w || !h) {
+    if (dbg) dbg.textContent = 'Video boyutu alınamadı';
+    return;
+  }
+  if (dbg) dbg.textContent = '📷 ' + w + 'x' + h + ' — jsQR: ' + (window.jsQR ? '✓' : '✗');
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0, w, h);
   let img;
-  try { img = ctx.getImageData(0, 0, w, h); } catch(e) { return; }
-  if (!window.jsQR) { console.warn('jsQR yüklenmedi'); return; }
+  try { img = ctx.getImageData(0, 0, w, h); } catch(e) {
+    if (dbg) dbg.textContent = 'Canvas hatası: ' + e.message; return;
+  }
+  if (!window.jsQR) return;
   const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
   if (code && code.data) {
-    console.log('QR okundu:', code.data);
+    if (dbg) dbg.textContent = '✅ QR: ' + code.data;
     const prod = PRODUCTS.find(p => p.qr === code.data || String(p.id) === String(code.data));
     if (prod) { showScanResult(prod); return; }
-    // Ürün bulunamazsa ekranda göster
     const el = document.getElementById('scannerResult');
     el.textContent = '⚠️ Ürün bulunamadı: ' + code.data;
     el.style.display = 'block';
