@@ -149,6 +149,24 @@ async function addToCart(userId) {
   await setDoc(doc(collection(db, 'sepetler'), userId), { cart, guncelleme: Date.now() });
 }
 
+window.secimiYap = async function(userId, userName) {
+  appEl.innerHTML = `<div class="spinner"></div><div class="status">Ekleniyor...</div>`;
+  try {
+    await addToCart(userId);
+    appEl.innerHTML = `
+      <div class="emoji">✅</div>
+      <div class="success">${prod.emoji} ${prod.name}<br>sepete eklendi</div>
+      <div class="status" style="margin-top:12px">${userName} · Satış uygulamasına dönün</div>
+    `;
+    setTimeout(() => {
+      if (window.history.length > 1) window.history.back();
+      else window.close();
+    }, 2000);
+  } catch(e) {
+    appEl.innerHTML = `<div class="error-msg">❌ Hata: ${e.message}<br><small style="color:#666">${e.code || ''}</small></div>`;
+  }
+};
+
 function init() {
   if (!urunId || !prod) {
     appEl.innerHTML = `<div class="error-msg">❌ Ürün bulunamadı: ${urunId || '?'}</div>`;
@@ -161,31 +179,9 @@ function init() {
     <div class="prod-price">€${Number(prod.price).toFixed(2)}</div>
     <div class="status">Kim ekliyor?</div>
     <div class="users">
-      ${USERS.map(u => `<button class="user-btn" data-uid="${u.id}">👤 ${u.ad}</button>`).join('')}
+      ${USERS.map(u => `<button class="user-btn" onclick="secimiYap('${u.id}','${u.ad}')">👤 ${u.ad}</button>`).join('')}
     </div>
   `;
-
-  document.querySelectorAll('.user-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const userId = btn.dataset.uid;
-      const userName = USERS.find(u => u.id === userId)?.ad;
-      appEl.innerHTML = `<div class="spinner"></div><div class="status">Ekleniyor...</div>`;
-      try {
-        await addToCart(userId);
-        appEl.innerHTML = `
-          <div class="emoji">✅</div>
-          <div class="success">${prod.emoji} ${prod.name}<br>sepete eklendi</div>
-          <div class="status" style="margin-top:12px">${userName} · Satış uygulamasına dönün</div>
-        `;
-        setTimeout(() => {
-          if (window.history.length > 1) window.history.back();
-          else window.close();
-        }, 2000);
-      } catch(e) {
-        appEl.innerHTML = `<div class="error-msg">❌ Hata: ${e.message}</div>`;
-      }
-    });
-  });
 }
 
 init();
