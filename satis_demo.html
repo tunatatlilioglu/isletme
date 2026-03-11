@@ -47,7 +47,7 @@ try {
   console.log("✅ Firebase bağlandı");
 } catch(e) {
   window._fb = null;
-  console.warn("⚠️ Firebase bağlanamadı", e);
+  console.error("⚠️ Firebase bağlanamadı:", e.code, e.message);
 }
 </script>
 <style>
@@ -1356,24 +1356,25 @@ let scannerInterval = null;
 
 // ============ FIREBASE / STORAGE ============
 function getDB() {
-  if (!window._fb) return null;
-  if (!window._fb.db) return null;
-  return window._fb.db; // fbReady kontrolünü kaldır, db varsa kullan
+  if (window._fb === undefined) return null; // henüz yüklenmedi
+  if (!window._fb) return null;             // yükleme başarısız
+  return window._fb.db || null;
 }
 
 async function saveSaleToFirebase(sale) {
-  let db = getDB();
-  if (!db) {
-    let tries = 0;
+  // window._fb === undefined ise Firebase henüz yükleniyor, bekle
+  if (window._fb === undefined) {
     await new Promise(resolve => {
       const check = setInterval(() => {
-        db = getDB();
-        if (db || ++tries > 15) { clearInterval(check); resolve(); }
-      }, 300);
+        if (window._fb !== undefined) { clearInterval(check); resolve(); }
+      }, 200);
+      setTimeout(() => { clearInterval(check); resolve(); }, 5000); // max 5sn
     });
   }
 
+  const db = getDB();
   if (!db) {
+    // Firebase yok — localStorage'a yaz
     const history = JSON.parse(localStorage.getItem('satis_demo_history') || '[]');
     history.unshift(sale);
     localStorage.setItem('satis_demo_history', JSON.stringify(history));
