@@ -1066,6 +1066,7 @@ function renderUrunYonetim() {
 
 function logout() {
   if (!confirm(currentUser?.ad + ' olarak çıkış yapılsın mı?')) return;
+  if (cartUnsubscribe) { cartUnsubscribe(); cartUnsubscribe = null; }
   currentUser = null;
   cart = [];
   salesHistory = [];
@@ -1352,18 +1353,25 @@ async function saveCartToFirebase() {
   } catch(e) { console.warn('Sepet kaydedilemedi:', e); }
 }
 
-async function loadCartFromFirebase() {
+let cartUnsubscribe = null;
+
+function listenCartFromFirebase() {
   const db = getDB();
   if (!db || !currentUser) return;
-  try {
-    const { doc, getDoc, collection } = window._fb;
-    const snap = await getDoc(doc(collection(db, 'sepetler'), currentUser.id));
+  // Önceki dinleyiciyi kapat
+  if (cartUnsubscribe) { cartUnsubscribe(); cartUnsubscribe = null; }
+  const { doc, onSnapshot, collection } = window._fb;
+  cartUnsubscribe = onSnapshot(doc(collection(db, 'sepetler'), currentUser.id), snap => {
     if (snap.exists() && snap.data().cart) {
       cart = snap.data().cart;
       updateCartBadge();
       renderCart();
     }
-  } catch(e) { console.warn('Sepet yüklenemedi:', e); }
+  });
+}
+
+async function loadCartFromFirebase() {
+  listenCartFromFirebase();
 }
 
 
