@@ -2536,44 +2536,83 @@ function renderOzet() {
   if (!state.toptancilar.length) { borcEl.innerHTML = '<div class="empty"><div class="icon">🏭</div><p>Toptancı yok</p></div>'; }
   else {
     const today = todayStr();
+    const eurKur = kurlar.EUR || 1;
+    const toEUR = (tutar, para) => {
+      if (para==='EUR') return tutar;
+      if (para==='TL')  return tutar / eurKur;
+      if (para==='USD') return tutar * (kurlar.USD||1) / eurKur;
+      if (para==='GBP') return tutar * (kurlar.GBP||1) / eurKur;
+      return tutar / eurKur;
+    };
     const yontemLabel = { nakit:'💵 Nakit', kredi:'💳 Kredi', senet:'📄 Senet', havale:'🏦 Havale' };
-    borcEl.innerHTML = state.toptancilar.map(t => {
+
+    let genelToplamEUR = 0;
+
+    const satirlar = state.toptancilar.map(t => {
       const bakiyeByPara = getToptanciBakiyeByPara(t.id);
+      // EUR eşdeğeri hesapla
+      const toplamEUR = Object.entries(bakiyeByPara).reduce((s,[p,v])=>s+toEUR(v,p),0);
+      genelToplamEUR += toplamEUR;
+
+      // Para birimi bazında satırlar
       const borcSatirlar = Object.entries(bakiyeByPara)
         .filter(([,v]) => Math.abs(v) > 0.001)
-        .map(([p,v]) => `<span class="${v>0?'amount-neg':'amount-pos'}" style="font-weight:800">${SYM[p]||''}${fmt(Math.abs(v))} ${p} ${v>0?'📛':'✅'}</span>`)
-        .join('<br>') || '<span class="amount-pos">Borç Yok ✅</span>';
+        .map(([p,v]) => `<span style="font-size:11px;color:var(--text2)">${SYM[p]||''}${fmt(Math.abs(v))} ${p}</span>`)
+        .join(' · ') || '';
 
-      // Bu toptancıya ait ileri vadeli ödemeler (henüz vadesi gelmemiş)
+      // İleri vadeli ödemeler
       const ileriOdemeler = state.toptanciIslemler.filter(i =>
         i.toptanciId === t.id &&
         (i.tur === 'odeme' || i.tur === 'iade') &&
         i.odemeVade && i.odemeVade >= today
       );
-
       let ileriHtml = '';
       if (ileriOdemeler.length) {
-        ileriHtml = `<div style="margin-top:8px;padding:8px;background:rgba(16,185,129,.07);border-radius:8px;border-left:3px solid var(--green)">
-          <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:4px">📅 İleri Vadeli Ödemeler</div>
+        ileriHtml = `<div style="margin-top:6px;padding:6px 8px;background:rgba(16,185,129,.07);border-radius:8px;border-left:3px solid var(--green)">
+          <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:3px">📅 Vadeli Ödemeler</div>
           ${ileriOdemeler.map(i => {
             const gunKaldi = dayDiff(today, i.odemeVade);
             const gecti = i.odemeVade < today;
             return `<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0">
-              <span>${yontemLabel[i.odemeYontemi]||'Ödeme'} — ${SYM[i.para]||''}${fmt(i.tutar)} ${i.para||'TL'}${i.odemeBelgeNo?' #'+i.odemeBelgeNo:''}</span>
+              <span>${yontemLabel[i.odemeYontemi]||'Ödeme'} — ${SYM[i.para]||''}${fmt(i.tutar)} ${i.para||'TL'}</span>
               <span style="font-weight:700;color:${gecti?'var(--red)':'var(--accent)'}">${formatDate(i.odemeVade)} · ${gecti?Math.abs(gunKaldi)+' gün gecikti':gunKaldi+' gün kaldı'}</span>
             </div>`;
           }).join('')}
         </div>`;
       }
 
+      const durum = Math.abs(toplamEUR) < 0.01
+        ? `<span style="color:var(--green);font-weight:800;font-size:13px">✅ Borç Yok</span>`
+        : toplamEUR > 0
+          ? `<div style="text-align:right">
+               <div style="font-size:16px;font-weight:800;color:var(--red)">📛 €${fmt(toplamEUR)}</div>
+               ${borcSatirlar ? `<div style="margin-top:2px">${borcSatirlar}</div>` : ''}
+             </div>`
+          : `<div style="text-align:right">
+               <div style="font-size:16px;font-weight:800;color:var(--green)">✅ €${fmt(Math.abs(toplamEUR))} alacak</div>
+               ${borcSatirlar ? `<div style="margin-top:2px">${borcSatirlar}</div>` : ''}
+             </div>`;
+
       return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-        <div class="ozet-row" style="border:none;padding:0;margin-bottom:${ileriOdemeler.length?'4':'0'}px">
-          <span class="ozet-label" style="font-weight:700">${t.adi}</span>
-          <div style="text-align:right">${borcSatirlar}</div>
+        <div class="ozet-row" style="border:none;padding:0;margin-bottom:${ileriOdemeler.length?'6':'0'}px">
+          <span class="ozet-label" style="font-weight:700;font-size:14px">${t.adi}</span>
+          ${durum}
         </div>
         ${ileriHtml}
       </div>`;
     }).join('');
+
+    // Genel toplam kutusu
+    const genelRenk = genelToplamEUR > 0.01 ? 'var(--red)' : genelToplamEUR < -0.01 ? 'var(--green)' : 'var(--text2)';
+    const genelLabel = genelToplamEUR > 0.01 ? '📛 Toplam Borç' : genelToplamEUR < -0.01 ? '✅ Toplam Alacak' : '✅ Net Sıfır';
+    const genelBox = `
+      <div style="background:${genelToplamEUR>0.01?'rgba(244,63,94,.08)':genelToplamEUR<-0.01?'rgba(16,185,129,.08)':'rgba(0,0,0,.04)'};border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">${genelLabel}</span>
+        <span style="font-size:22px;font-weight:800;color:${genelRenk}">€${fmt(Math.abs(genelToplamEUR))}</span>
+      </div>
+      ${eurKur>1?`<div style="font-size:10px;color:var(--text3);margin-bottom:8px">* 1 EUR = ${fmt(eurKur)} ₺ kuru ile hesaplandı</div>`:''}`;
+
+    borcEl.innerHTML = genelBox + satirlar;
   }
 
   // Gider dağılım
