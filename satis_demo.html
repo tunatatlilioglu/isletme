@@ -730,8 +730,14 @@ try {
   <div class="scanner-frame"><span></span></div>
   <div class="scanner-line"></div>
   <div class="scanner-hint">Ürünün QR kodunu çerçeve içine getirin</div>
+  <div style="position:absolute;bottom:80px;left:0;right:0;text-align:center;z-index:10">
+    <label style="display:inline-block;padding:10px 20px;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.5);border-radius:12px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">
+      📸 iOS: Fotoğrafla Tara
+      <input type="file" accept="image/*" capture="environment" id="iosCaptureInput" style="display:none" onchange="scanFromPhoto(this)">
+    </label>
+  </div>
   <div class="scanner-result" id="scannerResult"></div>
-  <div id="scannerDebug" style="position:absolute;bottom:60px;left:0;right:0;text-align:center;color:#fff;font-size:11px;background:rgba(0,0,0,.5);padding:4px;z-index:10"></div>
+  <div id="scannerDebug" style="position:absolute;bottom:40px;left:0;right:0;text-align:center;color:#fff;font-size:11px;background:rgba(0,0,0,.5);padding:4px;z-index:10"></div>
 </div>
 
 <!-- PRODUCT DETAIL MODAL -->
@@ -1782,6 +1788,8 @@ function renderStats() {
 function openScanner() {
   document.getElementById('scannerOverlay').classList.add('active');
   document.getElementById('scannerResult').style.display = 'none';
+  const dbg = document.getElementById('scannerDebug');
+
   navigator.mediaDevices.getUserMedia({
     video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
   })
@@ -1791,12 +1799,37 @@ function openScanner() {
     video.srcObject = stream;
     video.setAttribute('playsinline', true);
     video.play().then(() => {
-      scannerInterval = setInterval(scanFrame, 100);
-    }).catch(e => console.error('Video play hatası:', e));
+      // BarcodeDetector API destekleniyorsa kullan (Android Chrome)
+      if ('BarcodeDetector' in window) {
+        if (dbg) dbg.textContent = '📷 BarcodeDetector aktif';
+        const detector = new BarcodeDetector({ formats: ['qr_code'] });
+        const detect = () => {
+          if (!scannerStream) return;
+          detector.detect(video).then(codes => {
+            if (codes.length > 0) {
+              const data = codes[0].rawValue;
+              if (dbg) dbg.textContent = '✅ QR: ' + data;
+              const prod = PRODUCTS.find(p => p.qr === data || String(p.id) === String(data));
+              if (prod) { showScanResult(prod); return; }
+              const el = document.getElementById('scannerResult');
+              el.textContent = '⚠️ Ürün bulunamadı: ' + data;
+              el.style.display = 'block';
+            } else {
+              scannerInterval = setTimeout(detect, 200);
+            }
+          }).catch(() => { scannerInterval = setTimeout(detect, 200); });
+        };
+        detect();
+      } else {
+        // jsQR fallback
+        if (dbg) dbg.textContent = '📷 jsQR aktif';
+        scannerInterval = setInterval(scanFrame, 150);
+      }
+    }).catch(e => { if (dbg) dbg.textContent = 'Video play hatası: ' + e.message; });
   })
   .catch(e => {
-    console.error('Kamera hatası:', e);
-    showToast('Kamera açılamadı: ' + e.message);
+    if (dbg) dbg.textContent = 'Kamera hatası: ' + e.message;
+    showToast('Kamera açılamadı');
   });
 }
 
@@ -1847,10 +1880,46 @@ function showScanResult(prod) {
   }, 1200);
 }
 
-function closeScanner() {
+function scanFromPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const dbg = document.getElementById('scannerDebug');
+  if (dbg) dbg.textContent = 'Görüntü işleniyor...';
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById('scannerCanvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, img.width, img.height);
+      if (!window.jsQR) { if (dbg) dbg.textContent = 'jsQR yüklenemedi'; return; }
+      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+      if (code && code.data) {
+        if (dbg) dbg.textContent = '✅ QR: ' + code.data;
+        const prod = PRODUCTS.find(p => p.qr === code.data || String(p.id) === String(code.data));
+        if (prod) { showScanResult(prod); return; }
+        const el = document.getElementById('scannerResult');
+        el.textContent = '⚠️ Ürün bulunamadı: ' + code.data;
+        el.style.display = 'block';
+      } else {
+        if (dbg) dbg.textContent = 'QR okunamadı, tekrar deneyin';
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = ''; // aynı fotoğrafı tekrar seçebilmek için
+}
+
+
   document.getElementById('scannerOverlay').classList.remove('active');
   document.getElementById('scannerResult').style.display = 'none';
   clearInterval(scannerInterval);
+  clearTimeout(scannerInterval);
+  scannerInterval = null;
   if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
 }
 
@@ -1891,7 +1960,7 @@ Object.assign(window, {
   removeFromCart, clearCart, completeSale,
   showAllSales, satisSil,
   renderQrPage, toggleQrSelect, selectAllQr, deselectAllQr, printQrA4, printQrEtiket,
-  openScanner, closeScanner,
+  openScanner, closeScanner, scanFromPhoto,
   renderAyarlar, openKulModal, closeKulModal, kullaniciKaydet, kullaniciEkle, kullaniciSil, pinSifirla,
 });
 
