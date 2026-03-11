@@ -812,7 +812,10 @@ function selectUser(userId) {
   // Sepeti Firebase'den yükle
   loadCartFromFirebase().then(() => {
     // QR ile gelindiyse ürünü sepete ekle
-    const urunId = new URLSearchParams(location.search).get('urun');
+    // Önce URL'den, yoksa sessionStorage'dan oku
+    const urunId = new URLSearchParams(location.search).get('urun')
+                || sessionStorage.getItem('pendingUrun');
+    sessionStorage.removeItem('pendingUrun');
     if (urunId) {
       const prod = PRODUCTS.find(p => p.id === urunId);
       if (prod) {
@@ -825,6 +828,8 @@ function selectUser(userId) {
         showToast(`${prod.emoji} ${prod.name} sepete eklendi ✓`);
         showTab('sepet', document.querySelectorAll('.tab')[1]);
         history.replaceState({}, '', location.pathname);
+      } else {
+        showToast('⚠️ Ürün bulunamadı: ' + urunId);
       }
     }
   });
@@ -1759,6 +1764,16 @@ Object.assign(window, {
   renderQrPage, toggleQrSelect, selectAllQr, deselectAllQr, printQrA4, printQrEtiket,
   openScanner, closeScanner, scanSearch, selectScannedProd,
 });
+
+// Sayfa yüklenince ?urun= parametresini hemen sessionStorage'a kaydet
+// PWA standalone modunda URL parametresi kaybolabiliyor
+(function() {
+  const urunId = new URLSearchParams(location.search).get('urun');
+  if (urunId) {
+    sessionStorage.setItem('pendingUrun', urunId);
+    history.replaceState({}, '', location.pathname);
+  }
+})();
 
 init();
 </script>
