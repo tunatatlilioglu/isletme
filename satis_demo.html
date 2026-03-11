@@ -1889,32 +1889,45 @@ function scanFromPhoto(input) {
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
+      if (!window.jsQR) { if (dbg) dbg.textContent = '❌ jsQR yüklenemedi'; return; }
       const canvas = document.getElementById('scannerCanvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, img.width, img.height);
-      if (!window.jsQR) { if (dbg) dbg.textContent = 'jsQR yüklenemedi'; return; }
-      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+      // Farklı boyutlarda dene — iOS'ta büyük fotoğraflarda küçük ölçek daha iyi çalışır
+      const scales = [800, 600, 400, 1000, 1200];
+      let code = null;
+      for (const size of scales) {
+        let w = img.width, h = img.height;
+        if (w > h) { h = Math.round(h * size / w); w = size; }
+        else { w = Math.round(w * size / h); h = size; }
+        canvas.width = w; canvas.height = h;
+        ctx.drawImage(img, 0, 0, w, h);
+        if (dbg) dbg.textContent = `Deneniyor: ${w}x${h}...`;
+        const d = ctx.getImageData(0, 0, w, h);
+        code = jsQR(d.data, d.width, d.height, { inversionAttempts: 'attemptBoth' });
+        if (code && code.data) break;
+      }
       if (code && code.data) {
         if (dbg) dbg.textContent = '✅ QR: ' + code.data;
         const prod = PRODUCTS.find(p => p.qr === code.data || String(p.id) === String(code.data));
-        if (prod) { showScanResult(prod); return; }
-        const el = document.getElementById('scannerResult');
-        el.textContent = '⚠️ Ürün bulunamadı: ' + code.data;
-        el.style.display = 'block';
+        if (prod) { showScanResult(prod); }
+        else {
+          const el = document.getElementById('scannerResult');
+          el.textContent = '⚠️ Ürün bulunamadı: ' + code.data;
+          el.style.display = 'block';
+        }
       } else {
-        if (dbg) dbg.textContent = 'QR okunamadı, tekrar deneyin';
+        if (dbg) dbg.textContent = '❌ QR okunamadı — daha yakından çekin';
+        showToast('QR okunamadı, QR\'a daha yakın çekin');
       }
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
-  input.value = ''; // aynı fotoğrafı tekrar seçebilmek için
+  input.value = '';
 }
 
 
+function closeScanner() {
   document.getElementById('scannerOverlay').classList.remove('active');
   document.getElementById('scannerResult').style.display = 'none';
   clearInterval(scannerInterval);
