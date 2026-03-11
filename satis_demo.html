@@ -1049,6 +1049,16 @@ function checkPin() {
       updatePinDots();
       applyRoleUI();
       init();
+      // QR ile gelindiyse URL parametresini işle
+      const urunId = new URLSearchParams(location.search).get('urun');
+      if (urunId) {
+        const prod = PRODUCTS.find(p => p.id === urunId);
+        if (prod) {
+          showTab('urunler', document.querySelector('.tab'));
+          setTimeout(() => openProdModal(prod.id), 400);
+          history.replaceState({}, '', location.pathname);
+        }
+      }
     } else {
       for (let i = 0; i < 6; i++) document.getElementById('dot' + i).classList.add('error');
       document.getElementById('loginError').textContent = '❌ Hatalı PIN, tekrar deneyin';
@@ -1978,23 +1988,6 @@ Object.assign(window, {
 });
 
 init();
-
-// Telefon kamerasıyla QR okununca ?urun=C001 parametresiyle açılır
-(function() {
-  const urunId = new URLSearchParams(location.search).get('urun');
-  if (!urunId) return;
-  const tryOpen = (tries) => {
-    const prod = PRODUCTS.find(p => p.id === urunId);
-    if (prod && currentUser) {
-      showTab('urunler', document.querySelector('.tab'));
-      setTimeout(() => openProdModal(prod.id), 300);
-      history.replaceState({}, '', location.pathname);
-    } else if (tries > 0) {
-      setTimeout(() => tryOpen(tries - 1), 500);
-    }
-  };
-  tryOpen(20);
-})();
 </script>
 </body>
 </html>
