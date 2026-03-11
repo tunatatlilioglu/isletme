@@ -11,42 +11,44 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-// ============ FIREBASE CONFIG ============
-// ⚠️ BURAYA KENDİ FIREBASE BİLGİLERİNİZİ GİRİN
-const firebaseConfig = {
-  apiKey: "AIzaSyAJFmBJpgrZEDlbFqRS_itUU_lEZklHEPg",
-  authDomain: "isletme-kasa.firebaseapp.com",
-  projectId: "isletme-kasa",
-  storageBucket: "isletme-kasa.firebasestorage.app",
-  messagingSenderId: "644544266522",
-  appId: "1:644544266522:web:fc70d2374a382ce0aa6ca3"
-};
-
-let db = null;
-let fbReady = false;
-
+<!-- Firebase SDK — CDN compat -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+window._fb = undefined;
 try {
-  const app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
-  fbReady = true;
+  const app = firebase.initializeApp({
+    apiKey: "AIzaSyAJFmBJpgrZEDlbFqRS_itUU_lEZklHEPg",
+    authDomain: "isletme-kasa.firebaseapp.com",
+    projectId: "isletme-kasa",
+    storageBucket: "isletme-kasa.firebasestorage.app",
+    messagingSenderId: "644544266522",
+    appId: "1:644544266522:web:fc70d2374a382ce0aa6ca3"
+  });
+  const _db = app.firestore();
+  window._fb = {
+    db: _db,
+    doc:        (_d, ...segs) => _db.doc(segs.join('/')),
+    setDoc:     (ref, data) => ref.set(data),
+    getDoc:     (ref) => ref.get().then(s => ({ exists: () => s.exists, data: () => s.data(), id: s.id })),
+    onSnapshot: (ref, cb, errCb) => ref.onSnapshot(snap => {
+      if (snap.docs !== undefined) {
+        cb({ docs: snap.docs.map(d => ({ data: () => d.data(), id: d.id })) });
+      } else {
+        cb({ exists: () => snap.exists, data: () => snap.data(), id: snap.id });
+      }
+    }, errCb),
+    collection: (_d, name) => _db.collection(name),
+    query:      (ref, ...fns) => fns.reduce((r, fn) => fn(r), ref),
+    orderBy:    (field, dir='asc') => ref => ref.orderBy(field, dir),
+    deleteDoc:  (ref) => ref.delete(),
+    fbReady: true
+  };
   console.log("✅ Firebase bağlandı");
 } catch(e) {
-  console.warn("⚠️ Firebase bağlanamadı, localStorage kullanılıyor", e);
+  window._fb = null;
+  console.warn("⚠️ Firebase bağlanamadı", e);
 }
-
-// Expose to global scope for use in non-module scripts
-window._fb = { db, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, getDoc };
-window._fb.fbReady = fbReady;
-// fbReady'yi canlı tut
-if (fbReady) window._fb.fbReady = true;
-window._fbInit = function(cb) {
-  if (window._fb.fbReady) cb(window._fb.db);
-};
 </script>
 <style>
   :root {

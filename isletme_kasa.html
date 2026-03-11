@@ -9,32 +9,44 @@
 <!-- v2.1 -->
 <title>İşletme Kasa Takip</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, query, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-// ⚠️ BURAYA KENDİ FIREBASE BİLGİLERİNİZİ GİRİN (satis_demo ile aynı proje!)
-const firebaseConfig = {
-  apiKey: "AIzaSyAJFmBJpgrZEDlbFqRS_itUU_lEZklHEPg",
-  authDomain: "isletme-kasa.firebaseapp.com",
-  projectId: "isletme-kasa",
-  storageBucket: "isletme-kasa.firebasestorage.app",
-  messagingSenderId: "644544266522",
-  appId: "1:644544266522:web:fc70d2374a382ce0aa6ca3"
-};
-
-let db = null;
-
+<!-- Firebase SDK — CDN compat -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+window._fb = undefined;
 try {
-  const app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  const app = firebase.initializeApp({
+    apiKey: "AIzaSyAJFmBJpgrZEDlbFqRS_itUU_lEZklHEPg",
+    authDomain: "isletme-kasa.firebaseapp.com",
+    projectId: "isletme-kasa",
+    storageBucket: "isletme-kasa.firebasestorage.app",
+    messagingSenderId: "644544266522",
+    appId: "1:644544266522:web:fc70d2374a382ce0aa6ca3"
+  });
+  const _db = app.firestore();
+  window._fb = {
+    db: _db,
+    doc:        (_d, ...segs) => _db.doc(segs.join('/')),
+    setDoc:     (ref, data) => ref.set(data),
+    getDoc:     (ref) => ref.get().then(s => ({ exists: () => s.exists, data: () => s.data(), id: s.id })),
+    onSnapshot: (ref, cb, errCb) => ref.onSnapshot(snap => {
+      if (snap.docs !== undefined) {
+        cb({ docs: snap.docs.map(d => ({ data: () => d.data(), id: d.id })) });
+      } else {
+        cb({ exists: () => snap.exists, data: () => snap.data(), id: snap.id });
+      }
+    }, errCb),
+    collection: (_d, name) => _db.collection(name),
+    query:      (ref, ...fns) => fns.reduce((r, fn) => fn(r), ref),
+    orderBy:    (field, dir='asc') => ref => ref.orderBy(field, dir),
+    deleteDoc:  (ref) => ref.delete(),
+    fbReady: true
+  };
   console.log("✅ Firebase bağlandı");
 } catch(e) {
+  window._fb = null;
   console.warn("⚠️ Firebase bağlanamadı", e);
 }
-
-window._fb = { db, doc, setDoc, onSnapshot, getDoc, collection, query, orderBy, deleteDoc };
 </script>
 <style>
 :root {
@@ -453,35 +465,7 @@ tbody tr:last-child td { border-bottom: none; }
 </head>
 <body>
 
-<!-- PIN GİRİŞ EKRANI -->
-<div class="login-screen" id="loginScreen">
-  <div class="login-logo">💼</div>
-  <div class="login-title">Kasa & Hesap</div>
-  <div class="login-sub">6 haneli PIN'inizi girin</div>
-  <div class="pin-dots" id="pinDots">
-    <div class="pin-dot" id="dot0"></div>
-    <div class="pin-dot" id="dot1"></div>
-    <div class="pin-dot" id="dot2"></div>
-    <div class="pin-dot" id="dot3"></div>
-    <div class="pin-dot" id="dot4"></div>
-    <div class="pin-dot" id="dot5"></div>
-  </div>
-  <div class="pin-grid">
-    <button class="pin-btn" data-pin="1">1</button>
-    <button class="pin-btn" data-pin="2">2</button>
-    <button class="pin-btn" data-pin="3">3</button>
-    <button class="pin-btn" data-pin="4">4</button>
-    <button class="pin-btn" data-pin="5">5</button>
-    <button class="pin-btn" data-pin="6">6</button>
-    <button class="pin-btn" data-pin="7">7</button>
-    <button class="pin-btn" data-pin="8">8</button>
-    <button class="pin-btn" data-pin="9">9</button>
-    <button class="pin-btn empty"></button>
-    <button class="pin-btn" data-pin="0">0</button>
-    <button class="pin-btn del" id="pinDelBtn">⌫</button>
-  </div>
-  <div class="login-error" id="loginError"></div>
-</div>
+
 
 <!-- PRINT HEADER -->
 <div id="printDocHeader">
@@ -515,7 +499,7 @@ tbody tr:last-child td { border-bottom: none; }
   </div>
   <div class="nav-actions">
     <span id="syncStatus" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--bg);color:var(--text3)">⏳ Bağlanıyor...</span>
-    <span class="nav-user" id="navUser" onclick="kasaLogout()">👤 —</span>
+
     <button class="btn btn-secondary btn-sm" onclick="openPrintPanel()">🖨 Yazdır</button>
     <button class="btn btn-secondary btn-sm" onclick="backupData()">💾 Yedek</button>
     <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0">
@@ -1438,78 +1422,7 @@ tbody tr:last-child td { border-bottom: none; }
 <div class="toast" id="toast"></div>
 
 <script>
-// ===== PIN & KULLANICI SİSTEMİ =====
-// Kasa modülü: sadece tam yetkili kullanıcılar
-const KASA_USERS = [
-  { id: 'u1', ad: 'Mustafa', pin: '123456' },
-  { id: 'u2', ad: 'Fatih',   pin: '654321' },
-];
-
-let kasaCurrentUser = null;
-let kasaPinBuffer = '';
-
-function pinPress(d) {
-  if (kasaPinBuffer.length >= 6) return;
-  kasaPinBuffer += d;
-  updateKasaPinDots();
-  const err = document.getElementById('loginError');
-  if (err) err.textContent = '';
-  if (kasaPinBuffer.length === 6) setTimeout(checkKasaPin, 150);
-}
-
-function pinDel() {
-  kasaPinBuffer = kasaPinBuffer.slice(0, -1);
-  updateKasaPinDots();
-  const err = document.getElementById('loginError');
-  if (err) err.textContent = '';
-}
-
-function updateKasaPinDots() {
-  for (let i = 0; i < 6; i++) {
-    const dot = document.getElementById('dot' + i);
-    if (dot) {
-      dot.classList.toggle('filled', i < kasaPinBuffer.length);
-      dot.classList.remove('error');
-    }
-  }
-}
-
-function checkKasaPin() {
-  const enteredPin = kasaPinBuffer;
-  const user = KASA_USERS.find(u => u.pin === enteredPin);
-  if (user) {
-    kasaCurrentUser = user;
-    const ls = document.getElementById('loginScreen');
-    if (ls) ls.classList.add('hidden');
-    const nu = document.getElementById('navUser');
-    if (nu) nu.textContent = '👤 ' + user.ad;
-    kasaPinBuffer = '';
-    updateKasaPinDots();
-    load();
-    init();
-    const tryFb = () => { if (window._fb !== undefined) listenFirebase(); else setTimeout(tryFb, 200); };
-    tryFb();
-    fetchKurlar();
-  } else {
-    for (let i = 0; i < 6; i++) {
-      const dot = document.getElementById('dot' + i);
-      if (dot) dot.classList.add('error');
-    }
-    const err = document.getElementById('loginError');
-    if (err) err.textContent = '❌ Hatalı PIN, tekrar deneyin';
-    setTimeout(() => { kasaPinBuffer = ''; updateKasaPinDots(); }, 800);
-  }
-}
-
-function kasaLogout() {
-  if (!confirm(kasaCurrentUser?.ad + ' olarak çıkış yapılsın mı?')) return;
-  kasaCurrentUser = null;
-  kasaPinBuffer = '';
-  updateKasaPinDots();
-  document.getElementById('loginError').textContent = '';
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('navUser').textContent = '👤 —';
-}
+// ===== BAŞLANGIÇ =====
 
 // ===== STATE =====
 let state = {
@@ -3509,16 +3422,13 @@ function init() {
 }
 
 load();
-
-// PIN buton event listener'ları (type="module" scope sorunu çözümü)
-document.querySelectorAll('.pin-btn[data-pin]').forEach(btn => {
-  btn.addEventListener('click', () => pinPress(btn.dataset.pin));
-});
-document.getElementById('pinDelBtn')?.addEventListener('click', pinDel);
+init();
+fetchKurlar();
+const tryFb = () => { if (window._fb !== undefined) listenFirebase(); else setTimeout(tryFb, 200); };
+tryFb();
 
 // ── Global scope export ──
 Object.assign(window, {
-  kasaLogout,
   showPage, kasaEkle, kasaSil, fetchKurlar, openKurPanel, closeKurPanel, toggleKurPanel, saveManuelKur,
   gbEkle, gbOdendi, gbSil, renderGecmisBorc,
   openToptanciModal, toptanciEkle, toptanciSil,
