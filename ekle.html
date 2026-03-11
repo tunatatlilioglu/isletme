@@ -133,6 +133,9 @@ const PRODUCTS = [
 
 const urunId = new URLSearchParams(location.search).get('urun');
 const appEl = document.getElementById('app');
+// Son seçilen kullanıcıyı hatırla
+const savedUserId = sessionStorage.getItem('ekleUserId');
+const savedUserName = sessionStorage.getItem('ekleUserName');
 
 // Büyük/küçük harf duyarsız arama
 const prod = PRODUCTS.find(p =>
@@ -150,18 +153,27 @@ async function addToCart(userId) {
 }
 
 window.secimiYap = async function(userId, userName) {
+  // Kullanıcıyı hatırla
+  sessionStorage.setItem('ekleUserId', userId);
+  sessionStorage.setItem('ekleUserName', userName);
   appEl.innerHTML = `<div class="spinner"></div><div class="status">Ekleniyor...</div>`;
   try {
     await addToCart(userId);
     appEl.innerHTML = `
       <div class="emoji">✅</div>
       <div class="success">${prod.emoji} ${prod.name}<br>sepete eklendi</div>
-      <div class="status" style="margin-top:12px">${userName} · Satış uygulamasına dönün</div>
+      <div class="status" style="margin-top:8px">${userName}</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:28px;width:100%;max-width:280px">
+        <button onclick="window.location.href='https://tunatatlilioglu.github.io/isletme/satis_demo.html'"
+          style="padding:16px;border-radius:14px;border:none;background:#10b981;color:#fff;font-size:16px;font-weight:800;cursor:pointer">
+          🛒 Sepete Git
+        </button>
+        <button onclick="window.history.back()"
+          style="padding:16px;border-radius:14px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;font-weight:800;cursor:pointer">
+          📷 Başka Ürün Ekle
+        </button>
+      </div>
     `;
-    setTimeout(() => {
-      if (window.history.length > 1) window.history.back();
-      else window.close();
-    }, 2000);
   } catch(e) {
     appEl.innerHTML = `<div class="error-msg">❌ Hata: ${e.message}<br><small style="color:#666">${e.code || ''}</small></div>`;
   }
@@ -170,6 +182,12 @@ window.secimiYap = async function(userId, userName) {
 function init() {
   if (!urunId || !prod) {
     appEl.innerHTML = `<div class="error-msg">❌ Ürün bulunamadı: ${urunId || '?'}</div>`;
+    return;
+  }
+
+  // Daha önce kullanıcı seçildiyse direkt ekle
+  if (savedUserId && savedUserName) {
+    secimiYap(savedUserId, savedUserName);
     return;
   }
 

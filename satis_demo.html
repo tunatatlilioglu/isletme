@@ -809,28 +809,12 @@ function selectUser(userId) {
   document.getElementById('userBadge').textContent = '👤 ' + user.ad;
   applyRoleUI();
   init();
-  // Sepeti Firebase'den yükle
+  // Sepeti Firebase'den yükle ve dinle
   loadCartFromFirebase().then(() => {
-    // QR ile gelindiyse ürünü sepete ekle
-    // Önce URL'den, yoksa sessionStorage'dan oku
-    const urunId = new URLSearchParams(location.search).get('urun')
-                || sessionStorage.getItem('pendingUrun');
-    sessionStorage.removeItem('pendingUrun');
-    if (urunId) {
-      const prod = PRODUCTS.find(p => p.id === urunId);
-      if (prod) {
-        const existing = cart.find(i => i.id === prod.id && i.price === prod.price);
-        if (existing) existing.qty += 1;
-        else cart.push({ ...prod, qty: 1 });
-        updateCartBadge();
-        renderCart();
-        saveCartToFirebase();
-        showToast(`${prod.emoji} ${prod.name} sepete eklendi ✓`);
-        showTab('sepet', document.querySelectorAll('.tab')[1]);
-        history.replaceState({}, '', location.pathname);
-      } else {
-        showToast('⚠️ Ürün bulunamadı: ' + urunId);
-      }
+    // Sepette ürün varsa sepet sekmesine geç
+    if (cart.length > 0) {
+      showTab('sepet', document.querySelectorAll('.tab')[1]);
+      showToast(`🛒 Sepette ${cart.reduce((s,i)=>s+i.qty,0)} ürün var`);
     }
   });
 }
@@ -1356,22 +1340,30 @@ async function saveCartToFirebase() {
 let cartUnsubscribe = null;
 
 function listenCartFromFirebase() {
-  const db = getDB();
-  if (!db || !currentUser) return;
-  // Önceki dinleyiciyi kapat
+  // Firebase hazır değilse bekle
+  if (!window._fb || !window._fb.db) {
+    setTimeout(listenCartFromFirebase, 300);
+    return;
+  }
+  if (!currentUser) return;
   if (cartUnsubscribe) { cartUnsubscribe(); cartUnsubscribe = null; }
+  const db = window._fb.db;
   const { doc, onSnapshot, collection } = window._fb;
   cartUnsubscribe = onSnapshot(doc(collection(db, 'sepetler'), currentUser.id), snap => {
     if (snap.exists() && snap.data().cart) {
       cart = snap.data().cart;
-      updateCartBadge();
-      renderCart();
+    } else {
+      cart = [];
     }
-  });
+    updateCartBadge();
+    renderCart();
+  }, err => { console.warn('Sepet dinleme hatası:', err); });
 }
 
 async function loadCartFromFirebase() {
   listenCartFromFirebase();
+  // İlk yükleme için kısa bekleme
+  await new Promise(r => setTimeout(r, 800));
 }
 
 
