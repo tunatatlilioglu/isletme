@@ -581,6 +581,9 @@ try {
 
 <!-- SEPET -->
 <div class="page" id="page-sepet">
+  <div style="display:flex;justify-content:flex-end;padding:0 4px 8px">
+    <button onclick="listenCartFromFirebase();showToast('🔄 Sepet yenileniyor...')" style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:6px 12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🔄 Yenile</button>
+  </div>
   <div id="cartContent"></div>
 </div>
 
@@ -1364,15 +1367,19 @@ function listenCartFromFirebase() {
 }
 
 async function loadCartFromFirebase() {
-  // Firebase hazır olana kadar bekle (max 5 saniye)
+  // Firebase modülü yüklenene kadar bekle (max 8 saniye)
   let waited = 0;
-  while ((!window._fb || !window._fb.db) && waited < 5000) {
-    await new Promise(r => setTimeout(r, 200));
-    waited += 200;
+  while ((!window._fb || !window._fb.db) && waited < 8000) {
+    await new Promise(r => setTimeout(r, 300));
+    waited += 300;
+  }
+  if (!window._fb || !window._fb.db) {
+    console.warn('Firebase 8 saniyede yüklenemedi');
+    return;
   }
   listenCartFromFirebase();
-  // Snapshot'ın gelmesi için bekle
-  await new Promise(r => setTimeout(r, 1500));
+  // İlk snapshot için bekle
+  await new Promise(r => setTimeout(r, 2000));
 }
 
 
