@@ -551,7 +551,7 @@ try {
   <button class="tab" onclick="showTab('istatistik',this)">📊 İstatistik</button>
   <button class="tab admin-only" onclick="showTab('qr',this)" style="display:none">📱 QR</button>
   <button class="tab admin-only ortak-only" onclick="showTab('urun-yonetim',this)" style="display:none">⚙️ Ürünler</button>
-  <button class="tab admin-only ortak-only" onclick="showTab('ayarlar',this)" style="display:none">🔐 Ayarlar</button>
+
 </div>
 
 <!-- ÜRÜNLER -->
@@ -639,65 +639,7 @@ try {
 </div>
 
 <!-- AYARLAR SAYFASI -->
-<div class="page" id="page-ayarlar">
 
-  <!-- Yeni Kullanıcı Ekle -->
-  <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px">
-    <div style="font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">➕ Yeni Kullanıcı Ekle</div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <input type="text" id="yeniKulAd" placeholder="Ad Soyad" style="width:100%;padding:11px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:14px;outline:none">
-      <select id="yeniKulRol" style="width:100%;padding:11px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:14px;outline:none">
-        <option value="satis">Satış Temsilcisi — sadece satış yapabilir</option>
-        <option value="admin">Satışçı — istatistik + QR görebilir</option>
-        <option value="ortak">Ortak — tam yetki (kullanıcı yönetimi dahil)</option>
-      </select>
-      <input type="password" id="yeniKulPin" placeholder="PIN (6 hane rakam)" maxlength="6" inputmode="numeric"
-        style="width:100%;padding:11px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;letter-spacing:.2em">
-      <button onclick="kullaniciEkle()" style="width:100%;padding:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--radius);color:#000;font-family:var(--font-head);font-size:14px;font-weight:800;cursor:pointer">+ Kullanıcı Ekle</button>
-    </div>
-  </div>
-
-  <!-- Kullanıcı Listesi -->
-  <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px">
-    <div style="font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">👥 Kullanıcılar</div>
-    <div id="kullaniciListesi"></div>
-  </div>
-
-  <!-- PIN Sıfırla -->
-  <div style="background:var(--surface);border:1.5px solid rgba(244,63,94,.3);border-radius:var(--radius);padding:16px">
-    <div style="font-size:12px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">⚠️ Tüm PIN'leri Sıfırla</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">Tüm PIN'leri başlangıç değerlerine döndürür. Master kod gereklidir.</div>
-    <div style="display:flex;gap:8px">
-      <input type="password" id="masterKodInput" placeholder="Master kod"
-        style="flex:1;padding:11px 14px;background:var(--surface2);border:1.5px solid rgba(244,63,94,.3);border-radius:10px;color:var(--text);font-family:var(--font);font-size:14px;outline:none">
-      <button onclick="pinSifirla()" style="padding:11px 16px;background:rgba(244,63,94,.15);border:1.5px solid rgba(244,63,94,.4);border-radius:10px;color:var(--red);font-family:var(--font-head);font-size:13px;font-weight:800;cursor:pointer">Sıfırla</button>
-    </div>
-  </div>
-</div>
-
-<!-- KULLANICI DÜZENLE MODAL -->
-<div class="modal-overlay" id="kullaniciModal" onclick="closeKulModal(event)">
-  <div class="modal-sheet" style="max-height:85vh">
-    <div class="modal-drag"></div>
-    <div style="font-size:15px;font-weight:800;margin-bottom:16px">✏️ Kullanıcıyı Düzenle</div>
-    <input type="hidden" id="editKulId">
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <input type="text" id="editKulAd" placeholder="Ad Soyad"
-        style="width:100%;padding:11px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:14px;outline:none">
-      <select id="editKulRol" style="width:100%;padding:11px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:14px;outline:none">
-        <option value="satis">Satış Temsilcisi</option>
-        <option value="admin">Satışçı</option>
-        <option value="ortak">Ortak</option>
-      </select>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px">PIN Değiştir (boş bırakırsan değişmez)</div>
-      <input type="password" id="editKulPin" placeholder="Yeni PIN (6 hane, opsiyonel)" maxlength="6" inputmode="numeric"
-        style="width:100%;padding:11px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;letter-spacing:.2em">
-      <input type="password" id="editKulPinTekrar" placeholder="PIN tekrar"  maxlength="6" inputmode="numeric"
-        style="width:100%;padding:11px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;letter-spacing:.2em">
-      <button onclick="kullaniciKaydet()" style="width:100%;padding:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--radius);color:#000;font-family:var(--font-head);font-size:14px;font-weight:800;cursor:pointer">💾 Kaydet</button>
-    </div>
-  </div>
-</div>
 
 <!-- QR SCANNER -->
 <div class="scanner-overlay" id="scannerOverlay">
@@ -831,7 +773,7 @@ const PRODUCTS = [
 ];
 
 // ============ KULLANICI & PIN SİSTEMİ ============
-// YETKİLER: 'ortak' = tam yetki + ayarlar, 'admin' = tam yetki, 'satis' = sadece satış + kendi geçmişi
+// YETKİLER: 'ortak' = tam yetki, 'admin' = tam yetki, 'satis' = sadece satış + kendi geçmişi
 const USERS_DEFAULT = [
   { id: 'u1', ad: 'Mustafa', rol: 'ortak' },
   { id: 'u2', ad: 'Fatih',   rol: 'ortak' },
@@ -840,153 +782,11 @@ const USERS_DEFAULT = [
 let USERS = JSON.parse(JSON.stringify(USERS_DEFAULT));
 
 // Master kod
-const MASTER_KOD = 'tuna2015';
+
 
 // Firebase'den kullanıcıları yükle
-async function loadPinsFromFirebase() {
-  const db = getDB();
-  if (!db) return;
-  const { doc, getDoc, collection } = window._fb;
-  try {
-    const snap = await getDoc(doc(collection(db, 'ayarlar'), 'pinler'));
-    if (snap.exists() && snap.data().users && snap.data().users.length) {
-      const saved = snap.data().users;
-      USERS.length = 0;
-      saved.forEach(u => USERS.push(u));
-      let changed = false;
-      USERS_DEFAULT.forEach(def => {
-        const fb = USERS.find(u => u.id === def.id);
-        if (fb && fb.pin !== def.pin) {
-          const oldDefaults = ['111111','222222','333333','444444','555555'];
-          if (oldDefaults.includes(fb.pin)) { fb.pin = def.pin; changed = true; }
-        }
-      });
-      if (changed) savePinsToFirebase();
-    }
-  } catch(e) { console.warn('Kullanıcı yüklenemedi:', e); }
-}
-
-async function savePinsToFirebase() {
-  const db = getDB();
-  if (!db) return;
-  const { doc, setDoc, collection } = window._fb;
-  try {
-    await setDoc(doc(collection(db, 'ayarlar'), 'pinler'), { users: USERS });
-  } catch(e) { console.warn('Kullanıcı kaydedilemedi:', e); }
-}
-
-// ============ AYARLAR SAYFASI ============
-const ROL_LABEL = { ortak: '👑 Ortak', admin: '🔧 Satışçı', satis: '🛍 Satış Temsilcisi' };
-
-function renderAyarlar() {
-  const el = document.getElementById('kullaniciListesi');
-  el.innerHTML = USERS.map(u => {
-    const silinebilir = u.id !== 'u1' && u.id !== 'u2'; // Mustafa ve Fatih silinemez
-    return `<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)">
-      <div style="width:38px;height:38px;border-radius:50%;background:rgba(245,158,11,.15);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--accent);flex-shrink:0">${u.ad[0].toUpperCase()}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:700">${u.ad}</div>
-        <div style="font-size:11px;color:var(--text3)">${ROL_LABEL[u.rol] || u.rol}</div>
-      </div>
-      <button onclick="openKulModal('${u.id}')" style="background:rgba(245,158,11,.12);border:none;border-radius:8px;color:var(--accent);padding:7px 11px;cursor:pointer;font-size:13px;font-weight:700">✏️</button>
-      ${silinebilir ? `<button onclick="kullaniciSil('${u.id}')" style="background:rgba(244,63,94,.12);border:none;border-radius:8px;color:var(--red);padding:7px 11px;cursor:pointer;font-size:13px">🗑</button>` : '<div style="width:38px"></div>'}
-    </div>`;
-  }).join('');
-}
-
-function openKulModal(id) {
-  const u = USERS.find(x => x.id === id);
-  if (!u) return;
-  document.getElementById('editKulId').value = u.id;
-  document.getElementById('editKulAd').value = u.ad;
-  document.getElementById('editKulRol').value = u.rol;
-  document.getElementById('editKulPin').value = '';
-  document.getElementById('editKulPinTekrar').value = '';
-  document.getElementById('kullaniciModal').classList.add('active');
-}
-
-function closeKulModal(e) {
-  if (e.target === document.getElementById('kullaniciModal'))
-    document.getElementById('kullaniciModal').classList.remove('active');
-}
-
-async function kullaniciKaydet() {
-  const id = document.getElementById('editKulId').value;
-  const ad = document.getElementById('editKulAd').value.trim();
-  const rol = document.getElementById('editKulRol').value;
-  const yeniPin = document.getElementById('editKulPin').value.trim();
-  const tekrar = document.getElementById('editKulPinTekrar').value.trim();
-
-  if (!ad) { showToast('Ad girin'); return; }
-
-  const u = USERS.find(x => x.id === id);
-  if (!u) return;
-
-  // PIN değiştirme isteği varsa kontrol et
-  if (yeniPin) {
-    if (yeniPin.length !== 6 || !/^\d{6}$/.test(yeniPin)) { showToast('PIN 6 haneli rakam olmalı'); return; }
-    if (yeniPin !== tekrar) { showToast('PIN\'ler eşleşmiyor'); return; }
-    const cakisan = USERS.find(x => x.id !== id && x.pin === yeniPin);
-    if (cakisan) { showToast(cakisan.ad + ' bu PIN\'i kullanıyor'); return; }
-    u.pin = yeniPin;
-  }
-
-  u.ad = ad;
-  u.rol = rol;
-  await savePinsToFirebase();
-  document.getElementById('kullaniciModal').classList.remove('active');
-  renderAyarlar();
-  showToast('✓ ' + ad + ' güncellendi');
-}
-
-async function kullaniciEkle() {
-  const ad = document.getElementById('yeniKulAd').value.trim();
-  const rol = document.getElementById('yeniKulRol').value;
-  const pin = document.getElementById('yeniKulPin').value.trim();
-
-  if (!ad) { showToast('Ad girin'); return; }
-  if (pin.length !== 6 || !/^\d{6}$/.test(pin)) { showToast('PIN 6 haneli rakam olmalı'); return; }
-  const cakisan = USERS.find(u => u.pin === pin);
-  if (cakisan) { showToast(cakisan.ad + ' bu PIN\'i zaten kullanıyor'); return; }
-
-  const id = 'u' + Date.now();
-  USERS.push({ id, ad, pin, rol });
-  await savePinsToFirebase();
-
-  document.getElementById('yeniKulAd').value = '';
-  document.getElementById('yeniKulPin').value = '';
-  renderAyarlar();
-  showToast('✓ ' + ad + ' eklendi');
-}
-
-async function kullaniciSil(id) {
-  const u = USERS.find(x => x.id === id);
-  if (!u) return;
-  if (id === 'u1' || id === 'u2') { showToast('Bu kullanıcı silinemez'); return; }
-  if (!confirm(u.ad + ' silinsin mi? Geçmiş satışlardaki ismi korunur.')) return;
-  const idx = USERS.findIndex(x => x.id === id);
-  USERS.splice(idx, 1);
-  await savePinsToFirebase();
-  renderAyarlar();
-  showToast('Silindi');
-}
-
-async function pinSifirla() {
-  const kod = document.getElementById('masterKodInput').value.trim();
-  if (kod !== MASTER_KOD) { showToast('Master kod yanlış'); return; }
-  if (!confirm('Tüm PIN\'ler başlangıç değerlerine dönecek, eklenen kullanıcılar silinmeyecek. Emin misiniz?')) return;
-
-  USERS.forEach(u => {
-    const def = USERS_DEFAULT.find(d => d.id === u.id);
-    if (def) u.pin = def.pin;
-  });
-  await savePinsToFirebase();
-  document.getElementById('masterKodInput').value = '';
-  renderAyarlar();
-  showToast('✓ PIN\'ler sıfırlandı');
-}
-
 let currentUser = null;
+
 
 function selectUser(userId) {
   const user = USERS.find(u => u.id === userId);
@@ -1921,7 +1721,6 @@ function showTab(name, btn) {
   btn.classList.add('active');
   if (name === 'qr') renderQrPage();
   if (name === 'urun-yonetim') renderUrunYonetim();
-  if (name === 'ayarlar') renderAyarlar();
 }
 
 // ============ UTILS ============

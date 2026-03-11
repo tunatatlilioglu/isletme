@@ -451,30 +451,11 @@ tbody tr:last-child td { border-bottom: none; }
 <div class="login-screen" id="loginScreen">
   <div class="login-logo">💼</div>
   <div class="login-title">Kasa & Hesap</div>
-  <div class="login-sub">6 haneli PIN'inizi girin</div>
-  <div class="pin-dots" id="pinDots">
-    <div class="pin-dot" id="dot0"></div>
-    <div class="pin-dot" id="dot1"></div>
-    <div class="pin-dot" id="dot2"></div>
-    <div class="pin-dot" id="dot3"></div>
-    <div class="pin-dot" id="dot4"></div>
-    <div class="pin-dot" id="dot5"></div>
+  <div class="login-sub">Kim giriş yapıyor?</div>
+  <div style="display:flex;flex-direction:column;gap:14px;margin-top:24px;width:100%;max-width:280px">
+    <button onclick="kasaSelectUser('u1')" style="padding:18px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">👤 Mustafa</button>
+    <button onclick="kasaSelectUser('u2')" style="padding:18px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">👤 Fatih</button>
   </div>
-  <div class="pin-grid" id="pinGrid">
-    <button class="pin-btn">1</button>
-    <button class="pin-btn">2</button>
-    <button class="pin-btn">3</button>
-    <button class="pin-btn">4</button>
-    <button class="pin-btn">5</button>
-    <button class="pin-btn">6</button>
-    <button class="pin-btn">7</button>
-    <button class="pin-btn">8</button>
-    <button class="pin-btn">9</button>
-    <button class="pin-btn empty"></button>
-    <button class="pin-btn">0</button>
-    <button class="pin-btn del">⌫</button>
-  </div>
-  <div class="login-error" id="loginError"></div>
 </div>
 <div id="printDocHeader">
   <div class="ph-top">
@@ -1437,73 +1418,31 @@ tbody tr:last-child td { border-bottom: none; }
 <script>
 // ===== PIN & KULLANICI SİSTEMİ =====
 const KASA_USERS = [
-  { id: 'u1', ad: 'Mustafa', pin: '123456' },
-  { id: 'u2', ad: 'Fatih',   pin: '654321' },
+  { id: 'u1', ad: 'Mustafa' },
+  { id: 'u2', ad: 'Fatih' },
 ];
 
 let kasaCurrentUser = null;
-let kasaPinBuffer = '';
 
-function pinPress(d) {
-  if (kasaPinBuffer.length >= 6) return;
-  kasaPinBuffer += d;
-  updatePinDots();
-  document.getElementById('loginError').textContent = '';
-  if (kasaPinBuffer.length === 6) setTimeout(checkPin, 150);
+function kasaSelectUser(userId) {
+  const user = KASA_USERS.find(u => u.id === userId);
+  if (!user) return;
+  kasaCurrentUser = user;
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('navUser').textContent = '👤 ' + user.ad;
+  load();
+  init();
+  const tryFb = () => { if (window._fb !== undefined) listenFirebase(); else setTimeout(tryFb, 200); };
+  tryFb();
+  fetchKurlar();
 }
 
-function pinDel() {
-  kasaPinBuffer = kasaPinBuffer.slice(0, -1);
-  updatePinDots();
-  document.getElementById('loginError').textContent = '';
-}
-
-function updatePinDots() {
-  for (let i = 0; i < 6; i++) {
-    const dot = document.getElementById('dot' + i);
-    if (!dot) return;
-    dot.classList.toggle('filled', i < kasaPinBuffer.length);
-    dot.classList.remove('error');
-  }
-}
-
-function checkPin() {
-  const user = KASA_USERS.find(u => u.pin === kasaPinBuffer);
-  if (user) {
-    kasaCurrentUser = user;
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('navUser').textContent = '👤 ' + user.ad;
-    kasaPinBuffer = '';
-    updatePinDots();
-    load();
-    init();
-    const tryFb = () => { if (window._fb !== undefined) listenFirebase(); else setTimeout(tryFb, 200); };
-    tryFb();
-    fetchKurlar();
-  } else {
-    for (let i = 0; i < 6; i++) document.getElementById('dot' + i).classList.add('error');
-    document.getElementById('loginError').textContent = '❌ Hatalı PIN, tekrar deneyin';
-    setTimeout(() => { kasaPinBuffer = ''; updatePinDots(); }, 800);
-  }
-}
-
-// PIN butonlarına event listener — onclick kullanmıyoruz
+// Çıkış
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('#pinGrid .pin-btn').forEach(btn => {
-    if (btn.classList.contains('empty')) return;
-    if (btn.classList.contains('del')) {
-      btn.addEventListener('click', pinDel);
-    } else {
-      btn.addEventListener('click', () => pinPress(btn.textContent.trim()));
-    }
-  });
   document.getElementById('navUser').addEventListener('click', () => {
     if (!kasaCurrentUser) return;
     if (!confirm(kasaCurrentUser.ad + ' olarak çıkış yapılsın mı?')) return;
     kasaCurrentUser = null;
-    kasaPinBuffer = '';
-    updatePinDots();
-    document.getElementById('loginError').textContent = '';
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('navUser').textContent = '👤 —';
   });
@@ -3586,6 +3525,7 @@ function init() {
 
 // ── Global scope export ──
 Object.assign(window, {
+  kasaSelectUser,
   showPage, kasaEkle, kasaSil, fetchKurlar, openKurPanel, closeKurPanel, toggleKurPanel, saveManuelKur,
   gbEkle, gbOdendi, gbSil, renderGecmisBorc,
   openToptanciModal, toptanciEkle, toptanciSil,
