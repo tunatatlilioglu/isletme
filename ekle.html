@@ -150,6 +150,7 @@ async function addToCart(userId) {
   if (existing) existing.qty += 1;
   else cart.push({ ...prod, qty: 1 });
   await setDoc(doc(collection(db, 'sepetler'), userId), { cart, guncelleme: Date.now() });
+  return cart.reduce((s, i) => s + i.qty, 0); // toplam ürün sayısını döndür
 }
 
 window.secimiYap = async function(userId, userName) {
@@ -157,14 +158,11 @@ window.secimiYap = async function(userId, userName) {
   sessionStorage.setItem('ekleUserName', userName);
   appEl.innerHTML = `<div class="spinner"></div><div class="status">Ekleniyor...</div>`;
   try {
-    await addToCart(userId);
-    // Doğrulama: Firebase'den geri oku
-    const snap = await getDoc(doc(collection(db, 'sepetler'), userId));
-    const sepetUrunSayisi = snap.exists() ? (snap.data().cart || []).reduce((s,i)=>s+i.qty,0) : 0;
+    const sepetUrunSayisi = await addToCart(userId);
     appEl.innerHTML = `
       <div class="emoji">✅</div>
       <div class="success">${prod.emoji} ${prod.name}<br>sepete eklendi</div>
-      <div class="status" style="margin-top:8px">${userName} · Firebase'de toplam: ${sepetUrunSayisi} ürün</div>
+      <div class="status" style="margin-top:8px">${userName} · Sepette toplam: ${sepetUrunSayisi} ürün</div>
       <div style="display:flex;flex-direction:column;gap:12px;margin-top:28px;width:100%;max-width:280px">
         <a href="https://tunatatlilioglu.github.io/isletme/satis_demo.html"
           style="padding:16px;border-radius:14px;border:none;background:#10b981;color:#fff;font-size:16px;font-weight:800;cursor:pointer;text-decoration:none;text-align:center;display:block">
