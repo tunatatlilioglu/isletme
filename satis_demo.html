@@ -551,7 +551,6 @@ try {
   <div class="topbar-brand">🛍 Satış Modülü</div>
   <div class="topbar-right">
     <span class="user-badge" id="userBadge" onclick="logout()">👤 —</span>
-    <button onclick="openScanner()" style="background:var(--accent);border:none;border-radius:8px;padding:6px 11px;color:#000;font-size:13px;font-weight:800;cursor:pointer">📷 Tara</button>
     <span class="cart-badge" id="cartBadge">0 ürün</span>
   </div>
 </div>
@@ -571,8 +570,7 @@ try {
 <div class="page active" id="page-urunler">
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
-    <input type="text" id="searchInput" placeholder="Ürün ara..." oninput="filterProds()">
-    <button class="scan-btn" onclick="openScanner()">📷 QR Tara</button>
+    <input type="text" id="searchInput" placeholder="Ara..." oninput="filterProds()">
   </div>
 
   <div class="cats" id="catChips"></div>
@@ -658,22 +656,6 @@ try {
 
 
 <!-- QR SCANNER -->
-<div class="scanner-overlay" id="scannerOverlay">
-  <div class="scanner-header">
-    <span class="scanner-title">🔍 Ürün Tara / Ara</span>
-    <button class="scanner-close" onclick="closeScanner()">✕ Kapat</button>
-  </div>
-  <video id="scannerVideo" playsinline autoplay muted style="display:none;width:100%;max-height:40vh;object-fit:cover"></video>
-  <canvas id="scannerCanvas" style="display:none"></canvas>
-  <div style="padding:16px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;margin:0 auto">
-    <div style="color:#fff;font-size:12px;text-align:center;opacity:.6">Barkod okutun veya ürün adı/kodu yazın</div>
-    <input id="scanSearchInput" type="text" placeholder="Ürün adı veya kodu..."
-      oninput="scanSearch(this.value)"
-      style="padding:14px 16px;border-radius:12px;border:none;font-size:16px;outline:none;width:100%;box-sizing:border-box">
-    <div id="scanSearchResults" style="display:flex;flex-direction:column;gap:8px;max-height:40vh;overflow-y:auto"></div>
-  </div>
-  <div id="scannerDebug" style="position:fixed;bottom:8px;left:0;right:0;text-align:center;color:#fff;font-size:11px;background:rgba(0,0,0,.4);padding:3px;z-index:10"></div>
-</div>
 
 <!-- PRODUCT DETAIL MODAL -->
 <div class="modal-overlay" id="prodModal" onclick="closeProdModal(event)">
@@ -1072,8 +1054,6 @@ let salesHistory = [];
 let selectedProd = null;
 let modalQty = 1;
 let activecat = 'Tümü';
-let scannerStream = null;
-let scannerInterval = null;
 
 // ============ FIREBASE / STORAGE ============
 function getDB() {
@@ -1569,196 +1549,6 @@ function renderStats() {
       </div>`).join('');
 }
 
-// ============ QR SCANNER ============
-function openScanner() {
-  document.getElementById('scannerOverlay').classList.add('active');
-  const inp = document.getElementById('scanSearchInput');
-  inp.value = '';
-  document.getElementById('scanSearchResults').innerHTML = '';
-  const video = document.getElementById('scannerVideo');
-  const dbg = document.getElementById('scannerDebug');
-
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
-  .then(stream => {
-    scannerStream = stream;
-    video.srcObject = stream;
-    video.style.display = 'block';
-    video.setAttribute('playsinline', true);
-    video.play();
-
-    if ('BarcodeDetector' in window) {
-      if (dbg) dbg.textContent = '📷 Barkod tarayıcı aktif';
-      const detector = new BarcodeDetector({ formats: ['code_128', 'ean_13', 'ean_8', 'code_39', 'qr_code'] });
-      const detect = () => {
-        if (!scannerStream) return;
-        detector.detect(video).then(codes => {
-          if (codes.length > 0) {
-            const data = codes[0].rawValue;
-            if (dbg) dbg.textContent = '✅ ' + data;
-            // QR URL içerebilir: ?urun=C001 — ID'yi çıkar
-            const urlMatch = data.match(/[?&]urun=([^&]+)/);
-            const prodId = urlMatch ? urlMatch[1] : data;
-            const prod = PRODUCTS.find(p => p.id === prodId || p.qr === prodId);
-            if (prod) {
-              closeScanner();
-              // Direkt sepete ekle
-              const existing = cart.find(i => i.id === prod.id && i.price === prod.price);
-              if (existing) existing.qty += 1;
-              else cart.push({ ...prod, qty: 1 });
-              updateCartBadge(); renderCart(); saveCartToFirebase();
-              showToast(`${prod.emoji} ${prod.name} sepete eklendi ✓`);
-              showTab('sepet', document.querySelectorAll('.tab')[1]);
-              return;
-            }
-            if (dbg) dbg.textContent = '⚠️ Bulunamadı: ' + prodId;
-          }
-          scannerInterval = setTimeout(detect, 300);
-        }).catch(() => { scannerInterval = setTimeout(detect, 300); });
-      };
-      detect();
-    } else {
-      if (dbg) dbg.textContent = '📷 Kamera açık — barkod tarama desteklenmiyor, aşağıdan arayın';
-    }
-  })
-  .catch(e => {
-    if (dbg) dbg.textContent = 'Kamera açılamadı: ' + e.message;
-  });
-
-  setTimeout(() => inp.focus(), 500);
-}
-
-function scanSearch(val) {
-  const q = val.trim().toLowerCase();
-  const el = document.getElementById('scanSearchResults');
-  if (!q) { el.innerHTML = ''; return; }
-  const results = PRODUCTS.filter(p =>
-    p.name.toLowerCase().includes(q) ||
-    p.id.toLowerCase().includes(q) ||
-    (p.qr && p.qr.toLowerCase().includes(q))
-  ).slice(0, 10);
-  if (!results.length) {
-    el.innerHTML = '<div style="color:rgba(255,255,255,.5);text-align:center;padding:12px">Ürün bulunamadı</div>';
-    return;
-  }
-  el.innerHTML = results.map(p => `
-    <div onclick="selectScannedProd('${p.id}')"
-      style="background:rgba(255,255,255,.12);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;color:#fff">
-      <span style="font-size:24px">${p.emoji}</span>
-      <div style="flex:1">
-        <div style="font-weight:700;font-size:14px">${p.name}</div>
-        <div style="font-size:11px;opacity:.6">${p.cat} · #${p.id}</div>
-      </div>
-      <div style="font-weight:800;color:var(--accent)">€${fmt(p.price)}</div>
-    </div>`).join('');
-}
-
-function selectScannedProd(id) {
-  const prod = PRODUCTS.find(p => p.id === id);
-  if (prod) { closeScanner(); openProdModal(prod.id); }
-}
-
-function scanFrame() {
-  const video = document.getElementById('scannerVideo');
-  const canvas = document.getElementById('scannerCanvas');
-  const dbg = document.getElementById('scannerDebug');
-  if (!video || !canvas) return;
-  if (video.readyState < 2) {
-    if (dbg) dbg.textContent = 'Video hazırlanıyor... (state:' + video.readyState + ')';
-    return;
-  }
-  const w = video.videoWidth;
-  const h = video.videoHeight;
-  if (!w || !h) {
-    if (dbg) dbg.textContent = 'Video boyutu alınamadı';
-    return;
-  }
-  if (dbg) dbg.textContent = '📷 ' + w + 'x' + h + ' — jsQR: ' + (window.jsQR ? '✓' : '✗');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, w, h);
-  let img;
-  try { img = ctx.getImageData(0, 0, w, h); } catch(e) {
-    if (dbg) dbg.textContent = 'Canvas hatası: ' + e.message; return;
-  }
-  if (!window.jsQR) return;
-  const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
-  if (code && code.data) {
-    if (dbg) dbg.textContent = '✅ QR: ' + code.data;
-    const prod = PRODUCTS.find(p => p.qr === code.data || String(p.id) === String(code.data));
-    if (prod) { showScanResult(prod); return; }
-    const el = document.getElementById('scannerResult');
-    el.textContent = '⚠️ Ürün bulunamadı: ' + code.data;
-    el.style.display = 'block';
-  }
-}
-
-function showScanResult(prod) {
-  clearInterval(scannerInterval);
-  const el = document.getElementById('scannerResult');
-  el.textContent = `✓ ${prod.emoji} ${prod.name} — ₺${fmt(prod.price)}`;
-  el.style.display = 'block';
-  setTimeout(() => {
-    closeScanner();
-    openProdModal(prod.id);
-  }, 1200);
-}
-
-function scanFromPhoto(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const dbg = document.getElementById('scannerDebug');
-  if (dbg) dbg.textContent = 'Görüntü işleniyor...';
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => {
-      if (!window.jsQR) { if (dbg) dbg.textContent = '❌ jsQR yüklenemedi'; return; }
-      const canvas = document.getElementById('scannerCanvas');
-      const ctx = canvas.getContext('2d');
-      // Farklı boyutlarda dene — iOS'ta büyük fotoğraflarda küçük ölçek daha iyi çalışır
-      const scales = [800, 600, 400, 1000, 1200];
-      let code = null;
-      for (const size of scales) {
-        let w = img.width, h = img.height;
-        if (w > h) { h = Math.round(h * size / w); w = size; }
-        else { w = Math.round(w * size / h); h = size; }
-        canvas.width = w; canvas.height = h;
-        ctx.drawImage(img, 0, 0, w, h);
-        if (dbg) dbg.textContent = `Deneniyor: ${w}x${h}...`;
-        const d = ctx.getImageData(0, 0, w, h);
-        code = jsQR(d.data, d.width, d.height, { inversionAttempts: 'attemptBoth' });
-        if (code && code.data) break;
-      }
-      if (code && code.data) {
-        if (dbg) dbg.textContent = '✅ QR: ' + code.data;
-        const prod = PRODUCTS.find(p => p.qr === code.data || String(p.id) === String(code.data));
-        if (prod) { showScanResult(prod); }
-        else {
-          const el = document.getElementById('scannerResult');
-          el.textContent = '⚠️ Ürün bulunamadı: ' + code.data;
-          el.style.display = 'block';
-        }
-      } else {
-        if (dbg) dbg.textContent = '❌ QR okunamadı — daha yakından çekin';
-        showToast('QR okunamadı, QR\'a daha yakın çekin');
-      }
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-  input.value = '';
-}
-
-
-function closeScanner() {
-  document.getElementById('scannerOverlay').classList.remove('active');
-  document.getElementById('scannerResult').style.display = 'none';
-  clearInterval(scannerInterval);
-  clearTimeout(scannerInterval);
-  scannerInterval = null;
-  if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
-}
 
 // ============ TABS ============
 function showTab(name, btn) {
@@ -1793,7 +1583,6 @@ Object.assign(window, {
   removeFromCart, clearCart, completeSale, changeQty,
   showAllSales, satisSil,
   renderQrPage, toggleQrSelect, selectAllQr, deselectAllQr, printQrA4, printQrEtiket,
-  openScanner, closeScanner, scanSearch, selectScannedProd,
 });
 
 // iOS PWA: QR okunca yeni sekme açılır, PWA'ya geçmez.
