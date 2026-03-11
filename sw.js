@@ -1,20 +1,21 @@
-const CACHE = 'isletme-v1';
+const CACHE = 'isletme-v2';
 const STATIC = [
   '/isletme/satis_demo.html',
   '/isletme/isletme_kasa.html',
-  '/isletme/manifest.json',
-  '/isletme/icon-192.png',
-  '/isletme/icon-512.png',
+  '/isletme/manifest-satis.json',
+  '/isletme/manifest-kasa.json',
+  '/isletme/icon-satis-192.png',
+  '/isletme/icon-satis-512.png',
+  '/isletme/icon-kasa-192.png',
+  '/isletme/icon-kasa-512.png',
 ];
 
-// Kurulum — statik dosyaları önbelleğe al
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(c => c.addAll(STATIC)).then(() => self.skipWaiting())
   );
 });
 
-// Aktivasyon — eski önbellekleri temizle
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -23,21 +24,16 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch — önce ağ, hata varsa önbellekten sun
 self.addEventListener('fetch', e => {
-  // Firebase ve CDN isteklerini geç
   if (e.request.url.includes('firebaseapp') ||
       e.request.url.includes('googleapis') ||
       e.request.url.includes('gstatic') ||
       e.request.url.includes('cdnjs') ||
-      e.request.url.includes('cdn.jsdelivr')) {
-    return;
-  }
+      e.request.url.includes('cdn.jsdelivr')) return;
 
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        // Başarılı yanıtı önbelleğe de yaz
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
         return res;
