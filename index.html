@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>İşletme Yönetim</title>
+<!-- PWA -->
+<link rel="manifest" href="/isletme/manifest.json">
+<meta name="theme-color" content="#f59e0b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="İşletme">
+<link rel="apple-touch-icon" href="/isletme/icon-192.png">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/isletme/sw.js').catch(() => {});
+  }
+</script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117; --surface: #1a1d2e; --border: #2a2d3e;
+    --text: #f1f5f9; --text2: #94a3b8; --accent: #f59e0b;
+    --font: 'Inter', system-ui, sans-serif;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--font); min-height: 100dvh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 24px;
+  }
+  .logo { font-size: 56px; margin-bottom: 12px; }
+  .title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: var(--text2); margin-bottom: 48px; }
+  .cards { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 320px; }
+  .card {
+    display: flex; align-items: center; gap: 18px;
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: 18px; padding: 22px 20px;
+    text-decoration: none; color: var(--text);
+    transition: border-color .15s, transform .1s;
+    cursor: pointer;
+  }
+  .card:active { transform: scale(.97); border-color: var(--accent); }
+  .card-icon { font-size: 36px; flex-shrink: 0; }
+  .card-name { font-size: 18px; font-weight: 800; }
+  .card-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .card-arrow { margin-left: auto; color: var(--accent); font-size: 20px; }
+  .version { margin-top: 48px; font-size: 11px; color: var(--border); }
+</style>
+</head>
+<body>
+  <div class="logo">💼</div>
+  <div class="title">İşletme Yönetim</div>
+  <div class="sub">Uygulama seçin</div>
+  <div class="cards">
+    <a class="card" href="/isletme/satis_demo.html">
+      <div class="card-icon">🛍</div>
+      <div>
+        <div class="card-name">Satış Modülü</div>
+        <div class="card-desc">Ürün satışı, sepet, geçmiş</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </a>
+    <a class="card" href="/isletme/isletme_kasa.html">
+      <div class="card-icon">💰</div>
+      <div>
+        <div class="card-name">Kasa & Hesap</div>
+        <div class="card-desc">Kasa, toptancı, gider, rapor</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </a>
+  </div>
+  <div class="version">v1.0 · Firebase Firestore</div>
+
+  <script>
+    // iOS Chrome uyarısı
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isChrome = /CriOS/i.test(navigator.userAgent);
+    if (isIOS && isChrome) {
+      const banner = document.createElement('div');
+      banner.style.cssText = `
+        position:fixed; bottom:0; left:0; right:0;
+        background:#1a1d2e; border-top:2px solid #f59e0b;
+        padding:16px 20px; font-size:13px; line-height:1.5;
+        color:#f1f5f9; z-index:999;
+      `;
+      banner.innerHTML = `
+        <div style="font-weight:800;color:#f59e0b;margin-bottom:6px">📱 Ana Ekrana Eklemek İçin</div>
+        <div style="color:#94a3b8">Bu sayfayı <strong style="color:#f1f5f9">Safari</strong>'de açın:<br>
+        Adres çubuğuna yapıştırın → <strong style="color:#f1f5f9">Paylaş →  Ana Ekrana Ekle</strong></div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <input id="urlBox" value="${location.href}" readonly
+            style="flex:1;background:#0f1117;border:1px solid #2a2d3e;border-radius:8px;
+            padding:8px 10px;color:#f59e0b;font-size:12px;outline:none">
+          <button onclick="navigator.clipboard.writeText('${location.href}').then(()=>{this.textContent='✓ Kopyalandı'})"
+            style="background:#f59e0b;border:none;border-radius:8px;padding:8px 12px;
+            color:#000;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap">
+            Kopyala
+          </button>
+        </div>
+        <button onclick="this.parentElement.remove()"
+          style="position:absolute;top:12px;right:14px;background:none;border:none;
+          color:#94a3b8;font-size:20px;cursor:pointer">×</button>
+      `;
+      document.body.appendChild(banner);
+    }
+  </script>
+</body>
+</html>

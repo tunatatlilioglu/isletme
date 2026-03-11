@@ -1,0 +1,30 @@
+{
+  "name": "İşletme Yönetim",
+  "short_name": "İşletme",
+  "description": "Satış ve Kasa Yönetim Sistemi",
+  "start_url": "/isletme/satis_demo.html",
+  "scope": "/isletme/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1117",
+  "theme_color": "#f59e0b",
+  "lang": "tr",
+  "icons": [
+    { "src": "/isletme/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/isletme/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Satış",
+      "short_name": "Satış",
+      "url": "/isletme/satis_demo.html",
+      "icons": [{ "src": "/isletme/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Kasa",
+      "short_name": "Kasa",
+      "url": "/isletme/isletme_kasa.html",
+      "icons": [{ "src": "/isletme/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
