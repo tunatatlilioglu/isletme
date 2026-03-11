@@ -525,31 +525,12 @@ try {
 <div class="login-screen" id="loginScreen">
   <div class="login-logo">🛍</div>
   <div class="login-title">Satış Modülü</div>
-  <div class="login-sub">6 haneli PIN'inizi girin</div>
-  <div class="pin-dots" id="pinDots">
-    <div class="pin-dot" id="dot0"></div>
-    <div class="pin-dot" id="dot1"></div>
-    <div class="pin-dot" id="dot2"></div>
-    <div class="pin-dot" id="dot3"></div>
-    <div class="pin-dot" id="dot4"></div>
-    <div class="pin-dot" id="dot5"></div>
+  <div class="login-sub">Kim satıyor?</div>
+  <div style="display:flex;flex-direction:column;gap:14px;margin-top:24px;width:100%;max-width:280px">
+    <button onclick="selectUser('u1')" style="padding:18px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">👤 Mustafa</button>
+    <button onclick="selectUser('u2')" style="padding:18px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">👤 Fatih</button>
+    <button onclick="selectUser('u3')" style="padding:18px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">👤 Patrick</button>
   </div>
-  <div class="pin-grid">
-    <button class="pin-btn" data-pin="1">1</button>
-    <button class="pin-btn" data-pin="2">2</button>
-    <button class="pin-btn" data-pin="3">3</button>
-    <button class="pin-btn" data-pin="4">4</button>
-    <button class="pin-btn" data-pin="5">5</button>
-    <button class="pin-btn" data-pin="6">6</button>
-    <button class="pin-btn" data-pin="7">7</button>
-    <button class="pin-btn" data-pin="8">8</button>
-    <button class="pin-btn" data-pin="9">9</button>
-    <button class="pin-btn empty"></button>
-    <button class="pin-btn" data-pin="0">0</button>
-    <button class="pin-btn del" id="pinDelBtn">⌫</button>
-  </div>
-  <div class="login-user-name" id="loginUserName"></div>
-  <div class="login-error" id="loginError"></div>
 </div>
 
 <!-- TOP BAR -->
@@ -852,11 +833,9 @@ const PRODUCTS = [
 // ============ KULLANICI & PIN SİSTEMİ ============
 // YETKİLER: 'ortak' = tam yetki + ayarlar, 'admin' = tam yetki, 'satis' = sadece satış + kendi geçmişi
 const USERS_DEFAULT = [
-  { id: 'u1', ad: 'Mustafa',           pin: '123456', rol: 'ortak' },
-  { id: 'u2', ad: 'Fatih',             pin: '654321', rol: 'ortak' },
-  { id: 'u3', ad: 'Satışçı 1',         pin: '333333', rol: 'admin' },
-  { id: 'u4', ad: 'Satışçı 2',         pin: '444444', rol: 'admin' },
-  { id: 'u5', ad: 'Satış Temsilcisi',  pin: '555555', rol: 'satis' },
+  { id: 'u1', ad: 'Mustafa', rol: 'ortak' },
+  { id: 'u2', ad: 'Fatih',   rol: 'ortak' },
+  { id: 'u3', ad: 'Patrick', rol: 'admin' },
 ];
 let USERS = JSON.parse(JSON.stringify(USERS_DEFAULT));
 
@@ -1008,72 +987,34 @@ async function pinSifirla() {
 }
 
 let currentUser = null;
-let pinBuffer = '';
 
-function pinPress(d) {
-  if (pinBuffer.length >= 6) return;
-  pinBuffer += d;
-  updatePinDots();
-  document.getElementById('loginError').textContent = '';
-  if (pinBuffer.length === 6) {
-    setTimeout(checkPin, 150);
-  }
-}
-
-function pinDel() {
-  pinBuffer = pinBuffer.slice(0, -1);
-  updatePinDots();
-  document.getElementById('loginError').textContent = '';
-}
-
-function updatePinDots() {
-  for (let i = 0; i < 6; i++) {
-    const dot = document.getElementById('dot' + i);
-    dot.classList.toggle('filled', i < pinBuffer.length);
-    dot.classList.remove('error');
-  }
-  // Anlık kullanıcı adı göster
-  const match = USERS.find(u => u.pin.startsWith(pinBuffer) && pinBuffer.length > 0);
-  document.getElementById('loginUserName').textContent = '';
-}
-
-function checkPin() {
-  // Firebase henüz bağlanmadıysa USERS_DEFAULT ile dene, bağlandıktan sonra tekrar dene
-  const doCheck = () => {
-    const user = USERS.find(u => u.pin === pinBuffer);
-    if (user) {
-      currentUser = user;
-      document.getElementById('loginScreen').classList.add('hidden');
-      document.getElementById('userBadge').textContent = '👤 ' + user.ad;
-      pinBuffer = '';
-      updatePinDots();
-      applyRoleUI();
-      init();
-      // QR ile gelindiyse URL parametresini işle
-      const urunId = new URLSearchParams(location.search).get('urun');
-      if (urunId) {
-        const prod = PRODUCTS.find(p => p.id === urunId);
-        if (prod) {
-          showTab('urunler', document.querySelector('.tab'));
-          setTimeout(() => openProdModal(prod.id), 400);
-          history.replaceState({}, '', location.pathname);
-        }
+function selectUser(userId) {
+  const user = USERS.find(u => u.id === userId);
+  if (!user) return;
+  currentUser = user;
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('userBadge').textContent = '👤 ' + user.ad;
+  applyRoleUI();
+  init();
+  // Sepeti Firebase'den yükle
+  loadCartFromFirebase().then(() => {
+    // QR ile gelindiyse ürünü sepete ekle
+    const urunId = new URLSearchParams(location.search).get('urun');
+    if (urunId) {
+      const prod = PRODUCTS.find(p => p.id === urunId);
+      if (prod) {
+        const existing = cart.find(i => i.id === prod.id && i.price === prod.price);
+        if (existing) existing.qty += 1;
+        else cart.push({ ...prod, qty: 1 });
+        updateCartBadge();
+        renderCart();
+        saveCartToFirebase();
+        showToast(`${prod.emoji} ${prod.name} sepete eklendi ✓`);
+        showTab('sepet', document.querySelectorAll('.tab')[1]);
+        history.replaceState({}, '', location.pathname);
       }
-    } else {
-      for (let i = 0; i < 6; i++) document.getElementById('dot' + i).classList.add('error');
-      document.getElementById('loginError').textContent = '❌ Hatalı PIN, tekrar deneyin';
-      setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 800);
     }
-  };
-
-  // Firebase bağlıysa ve kullanıcılar yüklendiyse direkt kontrol et
-  // Değilse önce yükle, sonra kontrol et
-  const db = getDB();
-  if (db) {
-    loadPinsFromFirebase().then(doCheck);
-  } else {
-    doCheck();
-  }
+  });
 }
 
 function applyRoleUI() {
@@ -1308,12 +1249,9 @@ function renderUrunYonetim() {
 function logout() {
   if (!confirm(currentUser?.ad + ' olarak çıkış yapılsın mı?')) return;
   currentUser = null;
-  pinBuffer = '';
   cart = [];
   salesHistory = [];
   updateCartBadge();
-  updatePinDots();
-  document.getElementById('loginError').textContent = '';
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('userBadge').textContent = '👤 —';
   showTab('urunler', document.querySelectorAll('.tab')[0]);
@@ -1586,6 +1524,31 @@ function updateModalTotal() {
 }
 
 // ============ CART ============
+// ===== SEPET FIREBASE =====
+async function saveCartToFirebase() {
+  const db = getDB();
+  if (!db || !currentUser) return;
+  try {
+    const { doc, setDoc, collection } = window._fb;
+    await setDoc(doc(collection(db, 'sepetler'), currentUser.id), { cart, guncelleme: Date.now() });
+  } catch(e) { console.warn('Sepet kaydedilemedi:', e); }
+}
+
+async function loadCartFromFirebase() {
+  const db = getDB();
+  if (!db || !currentUser) return;
+  try {
+    const { doc, getDoc, collection } = window._fb;
+    const snap = await getDoc(doc(collection(db, 'sepetler'), currentUser.id));
+    if (snap.exists() && snap.data().cart) {
+      cart = snap.data().cart;
+      updateCartBadge();
+      renderCart();
+    }
+  } catch(e) { console.warn('Sepet yüklenemedi:', e); }
+}
+
+
 function addToCart() {
   if (!selectedProd) return;
   const price = parseFloat(document.getElementById('modalPrice').value) || selectedProd.price;
@@ -1595,6 +1558,7 @@ function addToCart() {
   document.getElementById('prodModal').classList.remove('active');
   updateCartBadge();
   renderCart();
+  saveCartToFirebase();
   showToast(`${selectedProd.emoji} ${selectedProd.name} sepete eklendi`);
   showTab('sepet', document.querySelectorAll('.tab')[1]);
 }
@@ -1609,11 +1573,13 @@ function changeQty(id, d) {
   if (!item) return;
   item.qty = Math.max(1, item.qty + d);
   updateCartBadge(); renderCart();
+  saveCartToFirebase();
 }
 
 function removeFromCart(id) {
   cart = cart.filter(i => i.id !== id);
   updateCartBadge(); renderCart();
+  saveCartToFirebase();
 }
 
 function renderCart() {
@@ -1672,8 +1638,9 @@ async function completeSale() {
   cart = [];
   updateCartBadge();
   renderCart();
+  saveCartToFirebase(); // Firebase'den sepeti temizle
 
-  // Save to Firebase (or localStorage fallback)
+  // Save to Firebase
   try {
     await saveSaleToFirebase(sale);
   } catch(e) {
@@ -1970,21 +1937,15 @@ function showToast(msg) {
 document.getElementById('modalPrice')?.addEventListener('input', updateModalTotal);
 
 // PIN buton event listener'ları (type="module" scope sorunu çözümü)
-document.querySelectorAll('.pin-btn[data-pin]').forEach(btn => {
-  btn.addEventListener('click', () => pinPress(btn.dataset.pin));
-});
-document.getElementById('pinDelBtn')?.addEventListener('click', pinDel);
-
 // ── Global scope export ──
 Object.assign(window, {
-  logout,
+  logout, selectUser,
   showTab, filterCat, filterSubCat, filterProds, toggleGroup,
   openProdModal, closeModal, addToCart, updateModalTotal,
-  removeFromCart, clearCart, completeSale,
+  removeFromCart, clearCart, completeSale, changeQty,
   showAllSales, satisSil,
   renderQrPage, toggleQrSelect, selectAllQr, deselectAllQr, printQrA4, printQrEtiket,
-  openScanner, closeScanner, scanSearch, selectScannedProd, scanFromPhoto,
-  renderAyarlar, openKulModal, closeKulModal, kullaniciKaydet, kullaniciEkle, kullaniciSil, pinSifirla,
+  openScanner, closeScanner, scanSearch, selectScannedProd,
 });
 
 init();
