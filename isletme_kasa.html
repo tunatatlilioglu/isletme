@@ -800,8 +800,6 @@ tbody tr:last-child td { border-bottom: none; }
       <div class="form-group">
         <label>Gider Türü</label>
         <select id="giderTur">
-          <option value="Mustafa">👤 Mustafa</option>
-          <option value="Fatih">👤 Fatih</option>
           <option value="Muhasebe">📑 Muhasebe</option>
           <option value="Gün">📅 Gün</option>
           <option value="Market">🛒 Market</option>
@@ -2884,7 +2882,7 @@ function renderRapor() {
   const turToplam = {};
   giderRows.forEach(g => { turToplam[g.tur] = (turToplam[g.tur]||0) + g.tutar; });
   const topGider = Object.values(turToplam).reduce((s,v)=>s+v,0);
-  const turEmoji = { Mustafa:'👤',Fatih:'👤',Muhasebe:'📑',Gün:'📅',Market:'🛒',Kira:'🏠',Elektrik:'💡',Su:'💧','Doğalgaz':'🔥','İnternet':'📶',Personel:'👥',Vergi:'🧾',Nakliye:'🚚','Diğer':'📌' };
+  const turEmoji = { Muhasebe:'📑',Gün:'📅',Market:'🛒',Kira:'🏠',Elektrik:'💡',Su:'💧','Doğalgaz':'🔥','İnternet':'📶',Personel:'👥',Vergi:'🧾',Nakliye:'🚚','Diğer':'📌' };
   document.getElementById('raporGider').innerHTML = !topGider
     ? '<div class="empty"><div class="icon">📋</div><p>Bu dönemde gider yok</p></div>'
     : Object.entries(turToplam).sort((a,b)=>b[1]-a[1]).map(([tur,v]) => `
