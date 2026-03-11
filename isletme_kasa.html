@@ -195,7 +195,7 @@ tbody tr:last-child td { border-bottom: none; }
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(15,20,40,0.5);
   display: flex; align-items: center; justify-content: center;
-  z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  z-index: 1200; opacity: 0; pointer-events: none; transition: opacity 0.2s;
   backdrop-filter: blur(3px);
 }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
@@ -419,7 +419,7 @@ tbody tr:last-child td { border-bottom: none; }
 <style>
   /* ---- PIN LOGIN ---- */
   .login-screen {
-    position: fixed; inset: 0; z-index: 1000;
+    position: fixed; inset: 0; z-index: 1500;
     background: var(--bg);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     padding: 32px 24px;
@@ -573,6 +573,9 @@ tbody tr:last-child td { border-bottom: none; }
       <div class="stat-sub">Toplam Sterlin bakiye</div>
     </div>
   </div>
+
+  <!-- Vadeli borç / senet hatırlatıcısı -->
+  <div id="vadeHatirlatici" style="display:none;margin-top:14px"></div>
 
   <div class="card section-gap">
     <div class="card-title">➕ Kasa Hareketi Ekle</div>
@@ -748,10 +751,21 @@ tbody tr:last-child td { border-bottom: none; }
 <div class="page" id="page-toptanci">
   <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
     <button class="btn btn-primary" onclick="openToptanciModal()">+ Toptancı Ekle</button>
-    <button class="btn btn-success" onclick="openIslemModal()">+ Alış / Ödeme Ekle</button>
+    <button class="btn btn-success" onclick="openIslemModal()">+ Alış / Ödeme / İade</button>
+    <button class="btn btn-secondary" onclick="openEskiBorcModal()">🕰 Eski Borç Ekle</button>
   </div>
 
   <div class="grid-2 section-gap" id="toptanciKartlar"></div>
+
+  <!-- Eski borç özet kontrolü -->
+  <div class="card section-gap" id="eskiBorcOzetKart" style="display:none">
+    <div class="card-title" style="justify-content:space-between">
+      🕰 Eski Toptancı Borçları
+      <button onclick="toggleEskiBorcDetay()" id="eskiBorcToggleBtn" style="background:rgba(245,158,11,.12);border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700;color:var(--accent)">▼ Detay</button>
+    </div>
+    <div id="eskiBorcOzet"></div>
+    <div id="eskiBorcDetay" style="display:none;margin-top:12px"></div>
+  </div>
 
   <div class="card">
     <div class="card-title" style="justify-content:space-between">
@@ -769,6 +783,7 @@ tbody tr:last-child td { border-bottom: none; }
             <th>Toptancı</th>
             <th>İşlem</th>
             <th>Tutar</th>
+            <th>Para</th>
             <th>Açıklama</th>
             <th>Bakiye</th>
             <th></th>
@@ -788,19 +803,33 @@ tbody tr:last-child td { border-bottom: none; }
       <div class="form-group">
         <label>Gider Türü</label>
         <select id="giderTur">
+          <option value="Mustafa">👤 Mustafa</option>
+          <option value="Fatih">👤 Fatih</option>
+          <option value="Muhasebe">📑 Muhasebe</option>
+          <option value="Gün">📅 Gün</option>
+          <option value="Market">🛒 Market</option>
           <option value="Kira">🏠 Kira</option>
           <option value="Elektrik">💡 Elektrik</option>
           <option value="Su">💧 Su</option>
           <option value="Doğalgaz">🔥 Doğalgaz</option>
           <option value="İnternet">📶 İnternet</option>
-          <option value="Personel">👤 Personel</option>
-          <option value="Vergi">📑 Vergi</option>
+          <option value="Personel">👥 Personel</option>
+          <option value="Vergi">🧾 Vergi</option>
           <option value="Nakliye">🚚 Nakliye</option>
           <option value="Diğer">📌 Diğer</option>
         </select>
       </div>
+      <div class="form-group fixed" style="min-width:90px">
+        <label>Para Birimi</label>
+        <select id="giderPara">
+          <option value="TL">₺ TL</option>
+          <option value="EUR">€ EUR</option>
+          <option value="USD">$ USD</option>
+          <option value="GBP">£ GBP</option>
+        </select>
+      </div>
       <div class="form-group">
-        <label>Tutar (TL)</label>
+        <label>Tutar</label>
         <input type="number" id="giderTutar" placeholder="0.00" step="0.01">
       </div>
       <div class="form-group">
@@ -836,7 +865,7 @@ tbody tr:last-child td { border-bottom: none; }
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Tarih</th><th>Tür</th><th>Tutar</th><th>Açıklama</th><th></th></tr>
+          <tr><th>Tarih</th><th>Tür</th><th>Tutar</th><th>Para</th><th>Açıklama</th><th></th></tr>
         </thead>
         <tbody id="giderTable"></tbody>
       </table>
@@ -846,6 +875,13 @@ tbody tr:last-child td { border-bottom: none; }
 
 <!-- ========== ÖZET ========== -->
 <div class="page" id="page-ozet">
+
+  <!-- NET BİLANÇO — en üstte tam genişlik -->
+  <div class="card section-gap" style="border:2px solid rgba(16,185,129,.3);margin-bottom:16px">
+    <div class="card-title" style="font-size:14px">🧮 Net Bilanço (Tüm Zamanlar)</div>
+    <div id="ozetNetBilanco"></div>
+  </div>
+
   <div class="grid-2 section-gap">
     <div class="card">
       <div class="card-title">💰 Kasa Özeti</div>
@@ -1146,14 +1182,69 @@ tbody tr:last-child td { border-bottom: none; }
       </div>
       <div class="form-group" style="margin-bottom:14px">
         <label>İşlem Türü</label>
-        <select id="islemTur">
+        <select id="islemTur" onchange="islemTurDegisti()">
           <option value="alis">🛒 Alış (Borç Artar)</option>
           <option value="odeme">💳 Ödeme (Borç Azalır)</option>
+          <option value="iade">↩️ İade (Borç Azalır)</option>
         </select>
       </div>
-      <div class="form-group" style="margin-bottom:14px">
-        <label>Tutar (TL)</label>
-        <input type="number" id="islemTutar" placeholder="0.00" step="0.01">
+      <!-- Ödeme yöntemi — sadece ödeme/iade -->
+      <div id="islemOdemeYontemiAlani" style="display:none;margin-bottom:14px;padding:10px;background:rgba(16,185,129,.07);border-radius:10px;border:1px solid rgba(16,185,129,.25)">
+        <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:8px">💳 Ödeme Yöntemi</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="radio" name="odemeYontemi" value="nakit" checked> 💵 Nakit
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="radio" name="odemeYontemi" value="kredi"> 💳 Kredi Kartı
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="radio" name="odemeYontemi" value="senet"> 📄 Senet
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="radio" name="odemeYontemi" value="havale"> 🏦 Havale/EFT
+          </label>
+        </div>
+        <!-- İleri tarihli ödeme — senet veya kredi seçilince -->
+        <div id="islemOdemeVadeAlani" style="display:none;margin-top:10px;display:flex;gap:8px">
+          <div class="form-group">
+            <label>Ödeme / Vade Tarihi</label>
+            <input type="date" id="islemOdemeVade">
+          </div>
+          <div class="form-group">
+            <label>Belge / Kart No</label>
+            <input type="text" id="islemOdemeBelgeNo" placeholder="Senet no, son 4 hane...">
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div class="form-group fixed" style="min-width:90px">
+          <label>Para Birimi</label>
+          <select id="islemPara">
+            <option value="TL">₺ TL</option>
+            <option value="EUR">€ EUR</option>
+            <option value="USD">$ USD</option>
+            <option value="GBP">£ GBP</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tutar</label>
+          <input type="number" id="islemTutar" placeholder="0.00" step="0.01">
+        </div>
+      </div>
+      <!-- Tarihli borç / senet alanı — sadece alışta görünür -->
+      <div id="islemSenetAlani" style="margin-bottom:14px;padding:10px;background:rgba(245,158,11,.07);border-radius:10px;border:1px solid rgba(245,158,11,.25)">
+        <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px">📄 Tarihli Borç / Senet (opsiyonel)</div>
+        <div style="display:flex;gap:8px">
+          <div class="form-group">
+            <label>Vade / Son Ödeme</label>
+            <input type="date" id="islemVade" placeholder="Vade tarihi">
+          </div>
+          <div class="form-group">
+            <label>Senet / Belge No</label>
+            <input type="text" id="islemSenetNo" placeholder="Senet no, belge...">
+          </div>
+        </div>
       </div>
       <div class="form-group" style="margin-bottom:14px">
         <label>Tarih</label>
@@ -1167,6 +1258,49 @@ tbody tr:last-child td { border-bottom: none; }
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('islemModal')">İptal</button>
       <button class="btn btn-primary" onclick="islemEkle()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ESKİ BORÇ MODAL -->
+<div class="modal-overlay" id="eskiBorcModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🕰 Eski Borç Ekle</h3>
+      <button class="btn btn-icon btn-secondary" onclick="closeModal('eskiBorcModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Toptancı</label>
+        <select id="eskiBorcToptanci"></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div class="form-group fixed" style="min-width:90px">
+          <label>Para Birimi</label>
+          <select id="eskiBorcPara">
+            <option value="TL">₺ TL</option>
+            <option value="EUR">€ EUR</option>
+            <option value="USD">$ USD</option>
+            <option value="GBP">£ GBP</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Borç Tutarı</label>
+          <input type="number" id="eskiBorcTutar" placeholder="0.00" step="0.01">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Borç Tarihi</label>
+        <input type="date" id="eskiBorcTarih">
+      </div>
+      <div class="form-group">
+        <label>Açıklama</label>
+        <input type="text" id="eskiBorcAciklama" placeholder="Dönem, fatura, senet vb.">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('eskiBorcModal')">İptal</button>
+      <button class="btn btn-primary" onclick="eskiBorcEkle()">Kaydet</button>
     </div>
   </div>
 </div>
@@ -1314,21 +1448,25 @@ function pinPress(d) {
   if (kasaPinBuffer.length >= 6) return;
   kasaPinBuffer += d;
   updateKasaPinDots();
-  document.getElementById('loginError').textContent = '';
+  const err = document.getElementById('loginError');
+  if (err) err.textContent = '';
   if (kasaPinBuffer.length === 6) setTimeout(checkKasaPin, 150);
 }
 
 function pinDel() {
   kasaPinBuffer = kasaPinBuffer.slice(0, -1);
   updateKasaPinDots();
-  document.getElementById('loginError').textContent = '';
+  const err = document.getElementById('loginError');
+  if (err) err.textContent = '';
 }
 
 function updateKasaPinDots() {
   for (let i = 0; i < 6; i++) {
     const dot = document.getElementById('dot' + i);
-    dot.classList.toggle('filled', i < kasaPinBuffer.length);
-    dot.classList.remove('error');
+    if (dot) {
+      dot.classList.toggle('filled', i < kasaPinBuffer.length);
+      dot.classList.remove('error');
+    }
   }
 }
 
@@ -1336,8 +1474,10 @@ function checkKasaPin() {
   const user = KASA_USERS.find(u => u.pin === kasaPinBuffer);
   if (user) {
     kasaCurrentUser = user;
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('navUser').textContent = '👤 ' + user.ad;
+    const ls = document.getElementById('loginScreen');
+    if (ls) ls.classList.add('hidden');
+    const nu = document.getElementById('navUser');
+    if (nu) nu.textContent = '👤 ' + user.ad;
     kasaPinBuffer = '';
     updateKasaPinDots();
     load();
@@ -1346,8 +1486,12 @@ function checkKasaPin() {
     tryFb();
     fetchKurlar();
   } else {
-    for (let i = 0; i < 6; i++) document.getElementById('dot' + i).classList.add('error');
-    document.getElementById('loginError').textContent = '❌ Hatalı PIN, tekrar deneyin';
+    for (let i = 0; i < 6; i++) {
+      const dot = document.getElementById('dot' + i);
+      if (dot) dot.classList.add('error');
+    }
+    const err = document.getElementById('loginError');
+    if (err) err.textContent = '❌ Hatalı PIN, tekrar deneyin';
     setTimeout(() => { kasaPinBuffer = ''; updateKasaPinDots(); }, 800);
   }
 }
@@ -1370,7 +1514,8 @@ let state = {
     { id: 'o2', ad: 'Fatih' }
   ],
   ortakIslemler: [],
-  gecmisBorc: []
+  gecmisBorc: [],
+  toptanciEskiBorc: []
 };
 let kurlar = { USD: 0, EUR: 0, GBP: 0, RUB: 0, updated: null };
 let _saveTimeout = null;
@@ -1445,6 +1590,7 @@ function listenFirebase() {
       if (data.ortaklar) state.ortaklar = data.ortaklar;
       if (data.ortakIslemler) state.ortakIslemler = data.ortakIslemler;
       if (data.gecmisBorc) state.gecmisBorc = data.gecmisBorc;
+      if (data.toptanciEskiBorc) state.toptanciEskiBorc = data.toptanciEskiBorc;
       renderKasa(); renderStats(); renderToptanciKartlar();
       renderToptanciIslemler(); renderToptanciFilter();
       renderGider(); renderGiderStats();
@@ -1784,9 +1930,14 @@ function renderGecmisBorc() {
   state.gecmisBorc.filter(x => !x.odendi).forEach(x => {
     toplamlar[x.para] = (toplamlar[x.para] || 0) + x.tutar;
   });
+  // Toptancı eski borçlarını da ekle
+  (state.toptanciEskiBorc||[]).forEach(b => {
+    const p = b.para||'TL';
+    toplamlar[p] = (toplamlar[p]||0) + b.tutar;
+  });
   const toplamStr = Object.entries(toplamlar).map(([p,t]) => `${sym[p]||''}${fmt(t)} ${p}`).join(' + ') || '—';
   document.getElementById('gecmisBorcToplam').textContent = toplamStr;
-  document.getElementById('gecmisBorcParaBirimi').textContent = 'Ödenmemiş toplam';
+  document.getElementById('gecmisBorcParaBirimi').textContent = 'Ödenmemiş + Toptancı eski borç toplamı';
 
   const tbody = document.getElementById('gecmisBorcTable');
   if (!rows.length) {
@@ -1829,44 +1980,87 @@ function toptanciSil(id) {
   showToast('Toptancı silindi');
 }
 
-function getToptanciBakiye(tid) {
-  return state.toptanciIslemler.filter(i => i.toptanciId === tid)
-    .reduce((s, i) => i.tur === 'alis' ? s + i.tutar : s - i.tutar, 0);
+const SYM = {EUR:'€',TL:'₺',USD:'$',GBP:'£'};
+
+function getToptanciBakiyeByPara(tid) {
+  // {EUR: x, TL: y, ...} — eski borç + normal işlemler
+  const bakiye = {};
+  // Eski borçlar
+  (state.toptanciEskiBorc||[]).filter(b => b.toptanciId === tid).forEach(b => {
+    const p = b.para||'TL';
+    bakiye[p] = (bakiye[p]||0) + b.tutar;
+  });
+  // Normal işlemler
+  state.toptanciIslemler.filter(i => i.toptanciId === tid).forEach(i => {
+    const p = i.para||'TL';
+    if (i.tur === 'alis') bakiye[p] = (bakiye[p]||0) + i.tutar;
+    else bakiye[p] = (bakiye[p]||0) - i.tutar; // odeme veya iade
+  });
+  return bakiye;
 }
+
+function getToptanciBakiye(tid) {
+  // geriye uyumluluk — TL toplamı döndür
+  const bk = getToptanciBakiyeByPara(tid);
+  return bk['TL'] || 0;
+}
+
+function islemTurDegisti() {
+  const tur = document.getElementById('islemTur').value;
+  const senetAlani = document.getElementById('islemSenetAlani');
+  const odemeYontemiAlani = document.getElementById('islemOdemeYontemiAlani');
+  if (senetAlani) senetAlani.style.display = tur === 'alis' ? '' : 'none';
+  if (odemeYontemiAlani) odemeYontemiAlani.style.display = (tur === 'odeme' || tur === 'iade') ? '' : 'none';
+  // reset seçim
+  const nakit = document.querySelector('input[name="odemeYontemi"][value="nakit"]');
+  if (nakit) { nakit.checked = true; odemeYontemiDegisti(); }
+}
+
+function odemeYontemiDegisti() {
+  const secili = document.querySelector('input[name="odemeYontemi"]:checked')?.value;
+  const vadeAlani = document.getElementById('islemOdemeVadeAlani');
+  if (vadeAlani) vadeAlani.style.display = (secili === 'kredi' || secili === 'senet') ? 'flex' : 'none';
+}
+
+// Radio butonlarına event ekle (sayfa yüklenince)
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('input[name="odemeYontemi"]').forEach(r =>
+    r.addEventListener('change', odemeYontemiDegisti)
+  );
+});
 
 function renderToptanciKartlar() {
   const el = document.getElementById('toptanciKartlar');
   if (!state.toptancilar.length) {
     el.innerHTML = `<div class="card" style="grid-column:1/-1"><div class="empty"><div class="icon">🏭</div><p>Henüz toptancı eklenmedi</p></div></div>`;
+    renderEskiBorcOzet();
     return;
   }
   el.innerHTML = state.toptancilar.map(t => {
-    const bakiye = getToptanciBakiye(t.id);
+    const bakiyeByPara = getToptanciBakiyeByPara(t.id);
     const islemSayisi = state.toptanciIslemler.filter(i => i.toptanciId === t.id).length;
+    const eskiBorcSayisi = (state.toptanciEskiBorc||[]).filter(b => b.toptanciId === t.id).length;
+    const borcStr = Object.entries(bakiyeByPara)
+      .filter(([,v]) => Math.abs(v) > 0.001)
+      .map(([p,v]) => `<span class="${v>0?'amount-neg':'amount-pos'}" style="font-size:15px;font-weight:800">${SYM[p]||''}${fmt(Math.abs(v))} ${p} ${v>0?'📛':'✅'}</span>`)
+      .join('<br>') || '<span class="amount-pos">Borç Yok ✅</span>';
     return `<div class="card">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
         <div class="borc-avatar">${t.adi[0].toUpperCase()}</div>
         <div style="flex:1">
           <div style="font-size:15px;font-weight:800">${t.adi}</div>
-          <div style="font-size:11px;color:var(--text2)">${t.tel||'Telefon yok'} · ${islemSayisi} işlem</div>
+          <div style="font-size:11px;color:var(--text2)">${t.tel||'Telefon yok'} · ${islemSayisi} işlem${eskiBorcSayisi?' · '+eskiBorcSayisi+' eski borç':''}</div>
         </div>
         <button class="btn btn-danger btn-icon btn-sm" onclick="toptanciSil(${t.id})">🗑</button>
       </div>
-      <div class="ozet-row">
-        <span class="ozet-label">Toplam Alış</span>
-        <span class="amount-neg">${fmt(state.toptanciIslemler.filter(i=>i.toptanciId===t.id&&i.tur==='alis').reduce((s,i)=>s+i.tutar,0))} ₺</span>
-      </div>
-      <div class="ozet-row">
-        <span class="ozet-label">Toplam Ödeme</span>
-        <span class="amount-pos">${fmt(state.toptanciIslemler.filter(i=>i.toptanciId===t.id&&i.tur==='odeme').reduce((s,i)=>s+i.tutar,0))} ₺</span>
-      </div>
-      <div class="ozet-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:12px">
+      <div class="ozet-row" style="border-top:2px solid var(--border);padding-top:12px">
         <span style="font-weight:700">Açık Borç</span>
-        <span class="${bakiye>0?'amount-neg':'amount-pos'}" style="font-size:16px;font-weight:800">${fmt(Math.abs(bakiye))} ₺ ${bakiye>0?'📛':bakiye<0?'✅':''}</span>
+        <div style="text-align:right">${borcStr}</div>
       </div>
       ${t.not?`<div style="margin-top:10px;font-size:11px;color:var(--text2);background:var(--bg);border-radius:7px;padding:8px">${t.not}</div>`:''}
     </div>`;
   }).join('');
+  renderEskiBorcOzet();
 }
 
 function openIslemModal() {
@@ -1876,21 +2070,39 @@ function openIslemModal() {
   document.getElementById('islemTutar').value = '';
   document.getElementById('islemAciklama').value = '';
   document.getElementById('islemTarih').value = todayStr();
+  document.getElementById('islemVade').value = '';
+  document.getElementById('islemSenetNo').value = '';
+  document.getElementById('islemOdemeVade').value = '';
+  document.getElementById('islemOdemeBelgeNo').value = '';
+  document.getElementById('islemTur').value = 'alis';
+  islemTurDegisti();
   openModal('islemModal');
 }
 
 function islemEkle() {
   const toptanciId = parseInt(document.getElementById('islemToptanci').value);
   const tur = document.getElementById('islemTur').value;
+  const para = document.getElementById('islemPara').value || 'TL';
   const tutar = parseFloat(document.getElementById('islemTutar').value);
   const tarih = document.getElementById('islemTarih').value;
   const aciklama = document.getElementById('islemAciklama').value.trim();
+  const vade = document.getElementById('islemVade').value || null;
+  const senetNo = document.getElementById('islemSenetNo').value.trim() || null;
+  // Ödeme alanları
+  const odemeYontemi = (tur === 'odeme' || tur === 'iade')
+    ? (document.querySelector('input[name="odemeYontemi"]:checked')?.value || 'nakit') : null;
+  const odemeVade = (odemeYontemi === 'kredi' || odemeYontemi === 'senet')
+    ? (document.getElementById('islemOdemeVade').value || null) : null;
+  const odemeBelgeNo = (odemeYontemi === 'kredi' || odemeYontemi === 'senet')
+    ? (document.getElementById('islemOdemeBelgeNo').value.trim() || null) : null;
+
   if (!tutar || tutar <= 0) { showToast('Geçerli tutar girin', 'error'); return; }
   if (!tarih) { showToast('Tarih seçin', 'error'); return; }
-  state.toptanciIslemler.push({ id: Date.now(), toptanciId, tur, tutar, tarih, aciklama });
+  state.toptanciIslemler.push({ id: Date.now(), toptanciId, tur, para, tutar, tarih, aciklama, vade, senetNo, odemeYontemi, odemeVade, odemeBelgeNo });
   state.toptanciIslemler.sort((a,b) => b.tarih.localeCompare(a.tarih));
   save(); closeModal('islemModal');
   renderToptanciKartlar(); renderToptanciIslemler(); renderOzet();
+  renderVadeHatirlatici();
   showToast('İşlem eklendi ✓');
 }
 
@@ -1898,6 +2110,7 @@ function islemSil(id) {
   if (!confirm('Bu işlemi silmek istiyor musunuz?')) return;
   state.toptanciIslemler = state.toptanciIslemler.filter(i => i.id !== id);
   save(); renderToptanciKartlar(); renderToptanciIslemler(); renderOzet();
+  renderVadeHatirlatici();
   showToast('Silindi');
 }
 
@@ -1912,42 +2125,205 @@ function renderToptanciIslemler() {
   const filter = document.getElementById('toptanciFilter').value;
   let rows = filter ? state.toptanciIslemler.filter(i => i.toptanciId == filter) : state.toptanciIslemler;
   const tbody = document.getElementById('toptanciIslemTable');
-  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="icon">🏭</div><p>Henüz hareket yok</p></div></td></tr>`; return; }
-
-  // running balance per toptanci
-  const balances = {};
-  const sorted = [...state.toptanciIslemler].sort((a,b) => a.tarih.localeCompare(b.tarih));
-  sorted.forEach(i => {
-    balances[i.toptanciId] = (balances[i.toptanciId] || 0) + (i.tur === 'alis' ? i.tutar : -i.tutar);
-  });
-
-  // per-row running balance (show only for filtered or all)
-  const runBalance = {};
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><div class="icon">🏭</div><p>Henüz hareket yok</p></div></td></tr>`; return; }
+  const turLabel = { alis:'🛒 Alış', odeme:'💳 Ödeme', iade:'↩️ İade' };
+  const turClass = { alis:'badge-red', odeme:'badge-green', iade:'badge-blue' };
+  const yontemLabel = { nakit:'💵 Nakit', kredi:'💳 Kredi', senet:'📄 Senet', havale:'🏦 Havale' };
   tbody.innerHTML = rows.map(i => {
     const t = state.toptancilar.find(t => t.id === i.toptanciId);
-    runBalance[i.toptanciId] = (runBalance[i.toptanciId] || 0) + (i.tur === 'alis' ? i.tutar : -i.tutar);
-    const bal = getToptanciBakiye(i.toptanciId);
+    const p = i.para || 'TL';
+    const bakiyeByPara = getToptanciBakiyeByPara(i.toptanciId);
+    const bakiyeStr = Object.entries(bakiyeByPara)
+      .filter(([,v]) => Math.abs(v) > 0.001)
+      .map(([pp,v]) => `${SYM[pp]||''}${fmt(Math.abs(v))} ${pp}`)
+      .join(' / ') || '0';
+    const vadeBadge = i.vade ? `<br><span style="font-size:10px;color:${isVadeGecti(i.vade)?'var(--red)':'var(--accent)'}">📄 Alış vadesi: ${formatDate(i.vade)}${i.senetNo?' #'+i.senetNo:''}</span>` : '';
+    let odemeBadge = '';
+    if (i.odemeYontemi && i.odemeYontemi !== 'nakit') {
+      odemeBadge = `<br><span style="font-size:10px;font-weight:700;color:var(--green)">${yontemLabel[i.odemeYontemi]||i.odemeYontemi}</span>`;
+      if (i.odemeVade) {
+        const gecti = i.odemeVade < todayStr();
+        odemeBadge += `<span style="font-size:10px;color:${gecti?'var(--red)':'var(--text3)'};margin-left:4px">Vade: ${formatDate(i.odemeVade)}${i.odemeBelgeNo?' #'+i.odemeBelgeNo:''} ${gecti?'⚠️':''}</span>`;
+      }
+    } else if (i.odemeYontemi === 'nakit') {
+      odemeBadge = `<br><span style="font-size:10px;color:var(--text3)">💵 Nakit</span>`;
+    }
     return `<tr>
-      <td>${formatDate(i.tarih)}</td>
+      <td>${formatDate(i.tarih)}${vadeBadge}</td>
       <td style="font-weight:600">${t ? t.adi : '?'}</td>
-      <td><span class="badge ${i.tur==='alis'?'badge-red':'badge-green'}">${i.tur==='alis'?'🛒 Alış':'💳 Ödeme'}</span></td>
-      <td class="${i.tur==='alis'?'amount-neg':'amount-pos'}">${i.tur==='alis'?'+':'−'}${fmt(i.tutar)} ₺</td>
+      <td><span class="badge ${turClass[i.tur]||'badge-blue'}">${turLabel[i.tur]||i.tur}</span>${odemeBadge}</td>
+      <td class="${i.tur==='alis'?'amount-neg':'amount-pos'}">${i.tur==='alis'?'+':'−'}${fmt(i.tutar)}</td>
+      <td><span class="badge badge-blue">${p}</span></td>
       <td style="color:var(--text2)">${i.aciklama||'—'}</td>
-      <td class="${bal>0?'amount-neg':'amount-pos'}">${fmt(Math.abs(bal))} ₺</td>
+      <td style="font-size:11px">${bakiyeStr}</td>
       <td><button class="btn btn-danger btn-icon btn-sm" onclick="islemSil(${i.id})">🗑</button></td>
     </tr>`;
   }).join('');
 }
 
+// Eski borç (toptancı) fonksiyonları
+function openEskiBorcModal() {
+  if (!state.toptancilar.length) { showToast('Önce toptancı ekleyin', 'error'); return; }
+  const sel = document.getElementById('eskiBorcToptanci');
+  sel.innerHTML = state.toptancilar.map(t => `<option value="${t.id}">${t.adi}</option>`).join('');
+  document.getElementById('eskiBorcTutar').value = '';
+  document.getElementById('eskiBorcAciklama').value = '';
+  document.getElementById('eskiBorcTarih').value = todayStr();
+  openModal('eskiBorcModal');
+}
+
+function eskiBorcEkle() {
+  const toptanciId = parseInt(document.getElementById('eskiBorcToptanci').value);
+  const para = document.getElementById('eskiBorcPara').value || 'TL';
+  const tutar = parseFloat(document.getElementById('eskiBorcTutar').value);
+  const tarih = document.getElementById('eskiBorcTarih').value;
+  const aciklama = document.getElementById('eskiBorcAciklama').value.trim();
+  if (!tutar || tutar <= 0) { showToast('Geçerli tutar girin', 'error'); return; }
+  if (!tarih) { showToast('Tarih seçin', 'error'); return; }
+  if (!state.toptanciEskiBorc) state.toptanciEskiBorc = [];
+  state.toptanciEskiBorc.push({ id: Date.now(), toptanciId, para, tutar, tarih, aciklama });
+  save(); closeModal('eskiBorcModal');
+  renderToptanciKartlar(); renderToptanciIslemler(); renderOzet();
+  showToast('Eski borç eklendi ✓');
+}
+
+function eskiBorcSil(id) {
+  if (!confirm('Bu eski borç kaydını silmek istiyor musunuz?')) return;
+  state.toptanciEskiBorc = (state.toptanciEskiBorc||[]).filter(b => b.id !== id);
+  save(); renderToptanciKartlar(); renderOzet();
+  showToast('Silindi');
+}
+
+let eskiBorcDetayAcik = false;
+function toggleEskiBorcDetay() {
+  eskiBorcDetayAcik = !eskiBorcDetayAcik;
+  renderEskiBorcOzet();
+}
+
+function renderEskiBorcOzet() {
+  const eb = state.toptanciEskiBorc || [];
+  const kart = document.getElementById('eskiBorcOzetKart');
+  if (!eb.length) { if(kart) kart.style.display='none'; return; }
+  if(kart) kart.style.display='';
+
+  // Özet: toptancı başına eski borç toplamı para bazında
+  const ozetEl = document.getElementById('eskiBorcOzet');
+  const detayEl = document.getElementById('eskiBorcDetay');
+  const btn = document.getElementById('eskiBorcToggleBtn');
+
+  const gruplar = {};
+  eb.forEach(b => {
+    if (!gruplar[b.toptanciId]) gruplar[b.toptanciId] = {};
+    const p = b.para||'TL';
+    gruplar[b.toptanciId][p] = (gruplar[b.toptanciId][p]||0) + b.tutar;
+  });
+
+  ozetEl.innerHTML = Object.entries(gruplar).map(([tid, paralar]) => {
+    const t = state.toptancilar.find(t => t.id == tid);
+    const borcStr = Object.entries(paralar).map(([p,v]) => `${SYM[p]||''}${fmt(v)} ${p}`).join(' + ');
+    return `<div class="ozet-row"><span style="font-weight:600">${t?t.adi:'?'}</span><span class="amount-neg">${borcStr}</span></div>`;
+  }).join('');
+
+  if (btn) btn.textContent = eskiBorcDetayAcik ? '▲ Gizle' : '▼ Detay';
+  if (detayEl) {
+    detayEl.style.display = eskiBorcDetayAcik ? '' : 'none';
+    if (eskiBorcDetayAcik) {
+      detayEl.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>Tarih</th><th>Toptancı</th><th>Tutar</th><th>Para</th><th>Açıklama</th><th></th></tr></thead>
+        <tbody>${eb.map(b => {
+          const t = state.toptancilar.find(t => t.id==b.toptanciId);
+          return `<tr>
+            <td>${formatDate(b.tarih)}</td>
+            <td>${t?t.adi:'?'}</td>
+            <td class="amount-neg">${SYM[b.para]||''}${fmt(b.tutar)}</td>
+            <td><span class="badge badge-blue">${b.para||'TL'}</span></td>
+            <td>${b.aciklama||'—'}</td>
+            <td><button class="btn btn-danger btn-icon btn-sm" onclick="eskiBorcSil(${b.id})">🗑</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>`;
+    }
+  }
+}
+
+// Vade hatırlatıcısı
+function isVadeGecti(vade) {
+  return vade && vade < todayStr();
+}
+
+function renderVadeHatirlatici() {
+  const el = document.getElementById('vadeHatirlatici');
+  if (!el) return;
+  const today = todayStr();
+
+  // Alış vadeleri
+  const alisVadeler = state.toptanciIslemler.filter(i => i.vade && i.tur === 'alis');
+  // Ödeme vadeleri (senet / kredi)
+  const odemeVadeler = state.toptanciIslemler.filter(i => i.odemeVade && (i.tur === 'odeme' || i.tur === 'iade'));
+
+  const tumVadeler = [
+    ...alisVadeler.map(i => ({ ...i, _vadeKey: i.vade, _tip: 'alis' })),
+    ...odemeVadeler.map(i => ({ ...i, _vadeKey: i.odemeVade, _tip: 'odeme' }))
+  ].filter(i => {
+    const v = i._vadeKey;
+    return v < today || v === today || v <= addDays(today, 7);
+  }).sort((a,b) => a._vadeKey.localeCompare(b._vadeKey));
+
+  if (!tumVadeler.length) { el.style.display='none'; return; }
+  el.style.display='';
+
+  const yontemLabel = { nakit:'💵 Nakit', kredi:'💳 Kredi', senet:'📄 Senet', havale:'🏦 Havale' };
+
+  const rows = tumVadeler.map(i => {
+    const t = state.toptancilar.find(t => t.id === i.toptanciId);
+    const vade = i._vadeKey;
+    const gunFark = dayDiff(today, vade);
+    let durum, renk;
+    if (vade < today) { durum = `${Math.abs(gunFark)} gün GECİKTİ`; renk = 'var(--red)'; }
+    else if (vade === today) { durum = 'BUGÜN'; renk = 'var(--red)'; }
+    else { durum = `${gunFark} gün kaldı`; renk = 'var(--accent)'; }
+
+    const tipLabel = i._tip === 'alis'
+      ? `📄 Alış vadesi${i.senetNo?' #'+i.senetNo:''}`
+      : `${yontemLabel[i.odemeYontemi]||'Ödeme'} vadesi${i.odemeBelgeNo?' #'+i.odemeBelgeNo:''}`;
+
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:12px;font-weight:700">${t?t.adi:'?'} — ${SYM[i.para]||''}${fmt(i.tutar)} ${i.para||'TL'}</div>
+        <div style="font-size:10px;color:var(--text3)">${tipLabel} · ${i.aciklama||'—'}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;font-weight:800;color:${renk}">${durum}</div>
+        <div style="font-size:10px;color:var(--text3)">${formatDate(vade)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="card" style="border:1.5px solid rgba(244,63,94,.3)">
+    <div class="card-title" style="color:var(--red)">📄 Vadeli Borç / Senet / Ödeme Hatırlatıcısı</div>
+    ${rows}
+  </div>`;
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr); d.setDate(d.getDate()+days);
+  return d.toISOString().split('T')[0];
+}
+
+function dayDiff(from, to) {
+  return Math.round((new Date(to)-new Date(from))/(1000*60*60*24));
+}
+
 // ===== GİDER =====
 function giderEkle() {
   const tur = document.getElementById('giderTur').value;
+  const para = document.getElementById('giderPara').value;
   const tutar = parseFloat(document.getElementById('giderTutar').value);
   const aciklama = document.getElementById('giderAciklama').value.trim();
   const tarih = document.getElementById('giderTarih').value;
   if (!tutar || tutar <= 0) { showToast('Geçerli tutar girin', 'error'); return; }
   if (!tarih) { showToast('Tarih seçin', 'error'); return; }
-  state.giderler.push({ id: Date.now(), tur, tutar, aciklama, tarih });
+  state.giderler.push({ id: Date.now(), tur, para: para||'TL', tutar, aciklama, tarih });
   state.giderler.sort((a,b) => b.tarih.localeCompare(a.tarih));
   save();
   document.getElementById('giderTutar').value = '';
@@ -1965,12 +2341,14 @@ function giderSil(id) {
 
 function renderGider() {
   const tbody = document.getElementById('giderTable');
-  if (!state.giderler.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="icon">📋</div><p>Henüz gider kaydı yok</p></div></td></tr>`; return; }
-  const turEmoji = { Kira:'🏠',Elektrik:'💡',Su:'💧','Doğalgaz':'🔥','İnternet':'📶',Personel:'👤',Vergi:'📑',Nakliye:'🚚','Diğer':'📌' };
+  if (!state.giderler.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="icon">📋</div><p>Henüz gider kaydı yok</p></div></td></tr>`; return; }
+  const turEmoji = { Mustafa:'👤',Fatih:'👤',Muhasebe:'📑',Gün:'📅',Market:'🛒',Kira:'🏠',Elektrik:'💡',Su:'💧','Doğalgaz':'🔥','İnternet':'📶',Personel:'👥',Vergi:'🧾',Nakliye:'🚚','Diğer':'📌' };
+  const sym = {EUR:'€',TL:'₺',USD:'$',GBP:'£'};
   tbody.innerHTML = state.giderler.map(g => `<tr>
     <td>${formatDate(g.tarih)}</td>
     <td><span class="badge badge-yellow">${turEmoji[g.tur]||'📌'} ${g.tur}</span></td>
-    <td class="amount-neg">−${fmt(g.tutar)} ₺</td>
+    <td class="amount-neg">−${fmt(g.tutar)}</td>
+    <td><span class="badge badge-blue">${g.para||'TL'}</span></td>
     <td style="color:var(--text2)">${g.aciklama||'—'}</td>
     <td><button class="btn btn-danger btn-icon btn-sm" onclick="giderSil(${g.id})">🗑</button></td>
   </tr>`).join('');
@@ -1980,14 +2358,99 @@ function renderGiderStats() {
   const now = new Date();
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const thisYear = `${now.getFullYear()}`;
-  const ayGider = state.giderler.filter(g => g.tarih.startsWith(thisMonth)).reduce((s,g)=>s+g.tutar,0);
-  const yilGider = state.giderler.filter(g => g.tarih.startsWith(thisYear)).reduce((s,g)=>s+g.tutar,0);
-  document.getElementById('stat-ay-gider').textContent = fmt(ayGider) + ' ₺';
-  document.getElementById('stat-yil-gider').textContent = fmt(yilGider) + ' ₺';
+  const sym = {EUR:'€',TL:'₺',USD:'$',GBP:'£'};
+  // Ay giderleri para birimi bazında
+  const ayGider = {}; const yilGider = {};
+  state.giderler.forEach(g => {
+    const p = g.para||'TL';
+    if (g.tarih.startsWith(thisMonth)) ayGider[p] = (ayGider[p]||0) + g.tutar;
+    if (g.tarih.startsWith(thisYear)) yilGider[p] = (yilGider[p]||0) + g.tutar;
+  });
+  const fmtMulti = obj => Object.entries(obj).map(([p,t]) => `${sym[p]||''}${fmt(t)}`).join(' + ') || '0';
+  document.getElementById('stat-ay-gider').textContent = fmtMulti(ayGider);
+  document.getElementById('stat-yil-gider').textContent = fmtMulti(yilGider);
 }
 
 // ===== ÖZET =====
 function renderOzet() {
+  const sym = {EUR:'€',TL:'₺',USD:'$',GBP:'£',RUB:'₽'};
+  const eurKur = kurlar.EUR || 1;
+  const toEUR = (tutar, para) => {
+    if (para==='EUR') return tutar;
+    if (para==='TL')  return tutar / eurKur;
+    if (para==='USD') return tutar * (kurlar.USD||1) / eurKur;
+    if (para==='GBP') return tutar * (kurlar.GBP||1) / eurKur;
+    return tutar / eurKur;
+  };
+
+  // ── NET BİLANÇO (tüm zamanlar) ──
+  const nbGelir = {}, nbGider = {}, nbToptanciOdeme = {};
+
+  // Satış geliri
+  nbGelir['EUR'] = satislarCache.reduce((s,x)=>s+(x.total||0),0);
+
+  // Kasa hareketleri
+  state.kasa.forEach(k => {
+    const p = k.para||'TL';
+    if (k.tur==='giris') nbGelir[p] = (nbGelir[p]||0) + k.tutar;
+    else nbGider[p] = (nbGider[p]||0) + k.tutar;
+  });
+
+  // Giderler
+  state.giderler.forEach(g => {
+    const p = g.para||'TL';
+    nbGider[p] = (nbGider[p]||0) + g.tutar;
+  });
+
+  // Toptancı ödemeleri
+  state.toptanciIslemler.filter(i=>i.tur!=='alis').forEach(i => {
+    const p = i.para||'TL';
+    nbToptanciOdeme[p] = (nbToptanciOdeme[p]||0) + i.tutar;
+  });
+
+  const totalGelirEUR = Object.entries(nbGelir).reduce((s,[p,v])=>s+toEUR(v,p),0);
+  const totalGiderEUR = Object.entries(nbGider).reduce((s,[p,v])=>s+toEUR(v,p),0);
+  const totalTopOdemeEUR = Object.entries(nbToptanciOdeme).reduce((s,[p,v])=>s+toEUR(v,p),0);
+  const netEUR = totalGelirEUR - totalGiderEUR - totalTopOdemeEUR;
+
+  const mkRow = (label, byPara, sign) =>
+    Object.entries(byPara).filter(([,v])=>v>0.001).map(([p,v]) =>
+      `<div class="ozet-row">
+        <span class="ozet-label" style="padding-left:10px;font-size:12px">↳ ${label} ${p}</span>
+        <span class="${sign>0?'amount-pos':'amount-neg'} ozet-val">${sign>0?'+':'−'}${sym[p]||''}${fmt(v)}</span>
+      </div>`).join('');
+
+  const netEl = document.getElementById('ozetNetBilanco');
+  if (netEl) netEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+      <div style="text-align:center;padding:12px;background:rgba(16,185,129,.08);border-radius:10px">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase">Toplam Gelir</div>
+        <div style="font-size:18px;font-weight:800;color:var(--green)">€${fmt(totalGelirEUR)}</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:rgba(244,63,94,.08);border-radius:10px">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase">Toplam Çıkış</div>
+        <div style="font-size:18px;font-weight:800;color:var(--red)">€${fmt(totalGiderEUR+totalTopOdemeEUR)}</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:${netEUR>=0?'rgba(16,185,129,.12)':'rgba(244,63,94,.12)'};border-radius:10px;border:2px solid ${netEUR>=0?'rgba(16,185,129,.4)':'rgba(244,63,94,.4)'}">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase">Net</div>
+        <div style="font-size:22px;font-weight:800;color:${netEUR>=0?'var(--green)':'var(--red)'}">${netEUR>=0?'+':''}€${fmt(netEUR)}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div style="font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;margin-bottom:4px">📈 Gelir Detayı</div>
+        ${mkRow('Satış', {EUR: nbGelir['EUR']||0}, 1)}
+        ${mkRow('Kasa Giriş', Object.fromEntries(Object.entries(nbGelir).filter(([p])=>p!=='EUR'||true).map(([p,v])=>[p,v-(p==='EUR'?(nbGelir['EUR']||0):0)]).filter(([,v])=>v>0.001)), 1)}
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:800;color:var(--red);text-transform:uppercase;margin-bottom:4px">📉 Çıkış Detayı</div>
+        ${mkRow('Gider', nbGider, -1)}
+        ${mkRow('Toptancı', nbToptanciOdeme, -1)}
+      </div>
+    </div>
+    ${eurKur>1?`<div style="font-size:10px;color:var(--text3);margin-top:8px;text-align:right">* EUR eşdeğeri — 1 EUR = ${fmt(eurKur)} ₺ kuru ile hesaplandı</div>`:''}
+  `;
+
   // Döviz bazlı bakiye hesapla
   const bakiye = { TL: 0, EUR: 0, USD: 0, GBP: 0, RUB: 0 };
   const giris = { TL: 0, EUR: 0, USD: 0, GBP: 0, RUB: 0 };
@@ -2056,17 +2519,45 @@ function renderOzet() {
   const borcEl = document.getElementById('ozetBorc');
   if (!state.toptancilar.length) { borcEl.innerHTML = '<div class="empty"><div class="icon">🏭</div><p>Toptancı yok</p></div>'; }
   else {
-    const topBorc = state.toptancilar.reduce((s,t)=>s+Math.max(0,getToptanciBakiye(t.id)),0);
+    const today = todayStr();
+    const yontemLabel = { nakit:'💵 Nakit', kredi:'💳 Kredi', senet:'📄 Senet', havale:'🏦 Havale' };
     borcEl.innerHTML = state.toptancilar.map(t => {
-      const b = getToptanciBakiye(t.id);
-      return `<div class="ozet-row">
-        <span class="ozet-label">${t.adi}</span>
-        <span class="${b>0?'amount-neg':'amount-pos'} ozet-val">${fmt(Math.abs(b))} ₺ ${b>0?'📛':'✅'}</span>
+      const bakiyeByPara = getToptanciBakiyeByPara(t.id);
+      const borcSatirlar = Object.entries(bakiyeByPara)
+        .filter(([,v]) => Math.abs(v) > 0.001)
+        .map(([p,v]) => `<span class="${v>0?'amount-neg':'amount-pos'}" style="font-weight:800">${SYM[p]||''}${fmt(Math.abs(v))} ${p} ${v>0?'📛':'✅'}</span>`)
+        .join('<br>') || '<span class="amount-pos">Borç Yok ✅</span>';
+
+      // Bu toptancıya ait ileri vadeli ödemeler (henüz vadesi gelmemiş)
+      const ileriOdemeler = state.toptanciIslemler.filter(i =>
+        i.toptanciId === t.id &&
+        (i.tur === 'odeme' || i.tur === 'iade') &&
+        i.odemeVade && i.odemeVade >= today
+      );
+
+      let ileriHtml = '';
+      if (ileriOdemeler.length) {
+        ileriHtml = `<div style="margin-top:8px;padding:8px;background:rgba(16,185,129,.07);border-radius:8px;border-left:3px solid var(--green)">
+          <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:4px">📅 İleri Vadeli Ödemeler</div>
+          ${ileriOdemeler.map(i => {
+            const gunKaldi = dayDiff(today, i.odemeVade);
+            const gecti = i.odemeVade < today;
+            return `<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0">
+              <span>${yontemLabel[i.odemeYontemi]||'Ödeme'} — ${SYM[i.para]||''}${fmt(i.tutar)} ${i.para||'TL'}${i.odemeBelgeNo?' #'+i.odemeBelgeNo:''}</span>
+              <span style="font-weight:700;color:${gecti?'var(--red)':'var(--accent)'}">${formatDate(i.odemeVade)} · ${gecti?Math.abs(gunKaldi)+' gün gecikti':gunKaldi+' gün kaldı'}</span>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }
+
+      return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div class="ozet-row" style="border:none;padding:0;margin-bottom:${ileriOdemeler.length?'4':'0'}px">
+          <span class="ozet-label" style="font-weight:700">${t.adi}</span>
+          <div style="text-align:right">${borcSatirlar}</div>
+        </div>
+        ${ileriHtml}
       </div>`;
-    }).join('') + `<div class="ozet-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:12px">
-      <span style="font-weight:700">Toplam Borç</span>
-      <span class="amount-neg ozet-val" style="font-size:17px">${fmt(topBorc)} ₺</span>
-    </div>`;
+    }).join('');
   }
 
   // Gider dağılım
@@ -2184,85 +2675,178 @@ function renderRapor() {
   const aralik = getRaporAralik();
   if (!aralik) { showToast('Tarih aralığı seçin', 'error'); return; }
   const { bas, bit } = aralik;
-
-  // Label
   const labels = { hafta: 'Bu Hafta', ay: 'Bu Ay', yil: 'Bu Yıl', ozel: 'Seçili Aralık' };
   document.getElementById('raporBaslikBilgi').textContent =
     `${labels[raporDon]}  •  ${formatDate(bas)} – ${formatDate(bit)}`;
 
-  // Filter data
-  const kasaRows = state.kasa.filter(k => inAralik(k.tarih, bas, bit));
-  const giderRows = state.giderler.filter(g => inAralik(g.tarih, bas, bit));
-  const islemRows = state.toptanciIslemler.filter(i => inAralik(i.tarih, bas, bit));
+  const kasaRows   = state.kasa.filter(k => inAralik(k.tarih, bas, bit));
+  const giderRows  = state.giderler.filter(g => inAralik(g.tarih, bas, bit));
+  const islemRows  = state.toptanciIslemler.filter(i => inAralik(i.tarih, bas, bit));
+  const satisRows  = satislarCache.filter(s => {
+    const t = (s.tarih||'').split('T')[0]; return t >= bas && t <= bit;
+  });
 
-  // Stats
-  const tlGiris = kasaRows.filter(k=>k.tur==='giris'&&k.para==='TL').reduce((s,k)=>s+k.tutar,0);
-  const tlCikis = kasaRows.filter(k=>k.tur==='cikis'&&k.para==='TL').reduce((s,k)=>s+k.tutar,0);
-  const dovizGirisTL = kasaRows.filter(k=>k.tur==='giris'&&k.para!=='TL').reduce((s,k)=>s+k.tutar*k.kur,0);
-  const dovizCikisTL = kasaRows.filter(k=>k.tur==='cikis'&&k.para!=='TL').reduce((s,k)=>s+k.tutar*k.kur,0);
-  const topGider = giderRows.reduce((s,g)=>s+g.tutar,0);
-  const topAlis = islemRows.filter(i=>i.tur==='alis').reduce((s,i)=>s+i.tutar,0);
-  const topOdeme = islemRows.filter(i=>i.tur==='odeme').reduce((s,i)=>s+i.tutar,0);
-  const net = (tlGiris + dovizGirisTL) - (tlCikis + dovizCikisTL) - topGider;
+  const sym = {EUR:'€',TL:'₺',USD:'$',GBP:'£',RUB:'₽'};
 
+  // ── Satış geliri (EUR) ──
+  const satisEUR = satisRows.reduce((s,x)=>s+(x.total||0),0);
+
+  // ── Kasa girişleri/çıkışları — para birimi bazında ──
+  const kasaGiris = {}, kasaCikis = {};
+  kasaRows.forEach(k => {
+    const p = k.para||'TL';
+    if (k.tur==='giris') kasaGiris[p] = (kasaGiris[p]||0) + k.tutar;
+    else kasaCikis[p] = (kasaCikis[p]||0) + k.tutar;
+  });
+
+  // ── Giderler — para birimi bazında ──
+  const giderByPara = {};
+  giderRows.forEach(g => {
+    const p = g.para||'TL';
+    giderByPara[p] = (giderByPara[p]||0) + g.tutar;
+  });
+
+  // ── Toptancı — para birimi bazında ──
+  const toptanciAlisByPara = {}, toptanciOdemeByPara = {};
+  islemRows.forEach(i => {
+    const p = i.para||'TL';
+    if (i.tur==='alis') toptanciAlisByPara[p] = (toptanciAlisByPara[p]||0) + i.tutar;
+    else toptanciOdemeByPara[p] = (toptanciOdemeByPara[p]||0) + i.tutar;
+  });
+
+  // ── Net bilanço — EUR üzerinden (kur ile) ──
+  const eurKur = kurlar.EUR || 1;
+  const tlKur  = 1;
+  const toEUR  = (tutar, para) => {
+    if (para==='EUR') return tutar;
+    if (para==='TL')  return tutar / eurKur;
+    if (para==='USD') return tutar * (kurlar.USD||1) / eurKur;
+    if (para==='GBP') return tutar * (kurlar.GBP||1) / eurKur;
+    return tutar / eurKur;
+  };
+
+  // Toplam gelir (EUR eşdeğeri)
+  const gelirEUR = satisEUR +
+    Object.entries(kasaGiris).reduce((s,[p,v])=>s+toEUR(v,p),0);
+  // Toplam gider (EUR eşdeğeri)
+  const giderEUR = Object.entries(giderByPara).reduce((s,[p,v])=>s+toEUR(v,p),0) +
+    Object.entries(kasaCikis).reduce((s,[p,v])=>s+toEUR(v,p),0);
+  // Toptancıya ödeme (EUR eşdeğeri) — borç değil, fiili ödeme
+  const toptanciOdemeEUR = Object.entries(toptanciOdemeByPara).reduce((s,[p,v])=>s+toEUR(v,p),0);
+  const netEUR = gelirEUR - giderEUR - toptanciOdemeEUR;
+
+  // ── Stat kartları ──
   document.getElementById('raporStatlar').innerHTML = `
-    <div class="stat-card green"><div class="stat-icon">📈</div><div class="stat-label">Toplam Giriş</div><div class="stat-value green">${fmt(tlGiris + dovizGirisTL)} ₺</div><div class="stat-sub">TL + Döviz</div></div>
-    <div class="stat-card red"><div class="stat-icon">📉</div><div class="stat-label">Toplam Çıkış</div><div class="stat-value red">${fmt(tlCikis + dovizCikisTL)} ₺</div><div class="stat-sub">TL + Döviz</div></div>
-    <div class="stat-card yellow"><div class="stat-icon">📋</div><div class="stat-label">Giderler</div><div class="stat-value">${fmt(topGider)} ₺</div><div class="stat-sub">${giderRows.length} kalem</div></div>
-    <div class="stat-card ${net>=0?'blue':'red'}"><div class="stat-icon">${net>=0?'✅':'⚠️'}</div><div class="stat-label">Net</div><div class="stat-value ${net>=0?'':'red'}">${fmt(net)} ₺</div><div class="stat-sub">Giriş − Çıkış − Gider</div></div>
+    <div class="stat-card green">
+      <div class="stat-icon">📈</div>
+      <div class="stat-label">Toplam Gelir</div>
+      <div class="stat-value green">€${fmt(gelirEUR)}</div>
+      <div class="stat-sub">Satış + Kasa girişleri</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-icon">📉</div>
+      <div class="stat-label">Toplam Gider</div>
+      <div class="stat-value red">€${fmt(giderEUR)}</div>
+      <div class="stat-sub">Giderler + Kasa çıkışları</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-icon">🏭</div>
+      <div class="stat-label">Toptancı Ödemeleri</div>
+      <div class="stat-value">€${fmt(toptanciOdemeEUR)}</div>
+      <div class="stat-sub">${islemRows.filter(i=>i.tur!=='alis').length} işlem</div>
+    </div>
+    <div class="stat-card ${netEUR>=0?'blue':'red'}">
+      <div class="stat-icon">${netEUR>=0?'✅':'⚠️'}</div>
+      <div class="stat-label">Net Bilanço</div>
+      <div class="stat-value ${netEUR>=0?'green':'red'}">€${fmt(netEUR)}</div>
+      <div class="stat-sub">Gelir − Gider − Toptancı</div>
+    </div>
   `;
 
-  // Kasa özeti
-  document.getElementById('raporKasa').innerHTML = `
-    <div class="ozet-row"><span class="ozet-label">TL Giriş</span><span class="amount-pos ozet-val">${fmt(tlGiris)} ₺</span></div>
-    <div class="ozet-row"><span class="ozet-label">Döviz Giriş (TL)</span><span class="amount-pos ozet-val">${fmt(dovizGirisTL)} ₺</span></div>
-    <div class="ozet-row"><span class="ozet-label">TL Çıkış</span><span class="amount-neg ozet-val">${fmt(tlCikis)} ₺</span></div>
-    <div class="ozet-row"><span class="ozet-label">Döviz Çıkış (TL)</span><span class="amount-neg ozet-val">${fmt(dovizCikisTL)} ₺</span></div>
-    <div class="ozet-row"><span class="ozet-label">Giderler</span><span class="amount-neg ozet-val">${fmt(topGider)} ₺</span></div>
-    <div class="ozet-row" style="border-top:2px solid var(--border);padding-top:12px;margin-top:4px">
-      <span style="font-weight:700">Net</span>
-      <span class="ozet-val" style="font-size:17px;color:${net>=0?'var(--green)':'var(--red)'}">${fmt(net)} ₺</span>
-    </div>`;
+  // ── Detaylı net bilanço kartı ──
+  const bilancoParagraphs = (label, byPara, sign) =>
+    Object.entries(byPara).filter(([,v])=>v>0.001).map(([p,v]) =>
+      `<div class="ozet-row">
+        <span class="ozet-label" style="padding-left:12px;font-size:12px">↳ ${label} ${p}</span>
+        <span class="${sign>0?'amount-pos':'amount-neg'} ozet-val">${sign>0?'+':'−'}${sym[p]||''}${fmt(v)}</span>
+      </div>`).join('');
 
-  // Gider dağılım
+  document.getElementById('raporKasa').innerHTML = `
+    <!-- GELİRLER -->
+    <div style="font-size:11px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.06em;padding:6px 0 4px">📈 Gelirler</div>
+    ${satisEUR>0?`<div class="ozet-row"><span class="ozet-label">🛍 Satış Geliri</span><span class="amount-pos ozet-val">€${fmt(satisEUR)}</span></div>`:''}
+    ${bilancoParagraphs('Kasa Giriş', kasaGiris, 1)}
+    ${(!satisEUR && !Object.keys(kasaGiris).length)?'<div style="font-size:12px;color:var(--text3);padding:4px 0">— Gelir yok —</div>':''}
+
+    <!-- GİDERLER -->
+    <div style="font-size:11px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.06em;padding:10px 0 4px">📉 Giderler & Çıkışlar</div>
+    ${bilancoParagraphs('Gider', giderByPara, -1)}
+    ${bilancoParagraphs('Kasa Çıkış', kasaCikis, -1)}
+    ${(!Object.keys(giderByPara).length && !Object.keys(kasaCikis).length)?'<div style="font-size:12px;color:var(--text3);padding:4px 0">— Gider yok —</div>':''}
+
+    <!-- TOPTANCI ÖDEMELERİ -->
+    ${Object.keys(toptanciOdemeByPara).length?`
+    <div style="font-size:11px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;padding:10px 0 4px">🏭 Toptancı Ödemeleri</div>
+    ${bilancoParagraphs('Ödeme', toptanciOdemeByPara, -1)}`:''}
+
+    <!-- NET -->
+    <div style="border-top:2px solid var(--border);margin-top:12px;padding-top:12px">
+      <div class="ozet-row">
+        <span style="font-weight:800;font-size:14px">🧮 Net Bilanço (EUR eşd.)</span>
+        <span style="font-size:20px;font-weight:800;color:${netEUR>=0?'var(--green)':'var(--red)'}">€${fmt(netEUR)}</span>
+      </div>
+      ${eurKur>1?`<div style="font-size:10px;color:var(--text3);text-align:right;margin-top:2px">1 EUR = ${fmt(eurKur)} ₺ kuru kullanıldı</div>`:''}
+    </div>
+  `;
+
+  // ── Gider dağılımı ──
   const turToplam = {};
   giderRows.forEach(g => { turToplam[g.tur] = (turToplam[g.tur]||0) + g.tutar; });
-  const turEmoji = { Kira:'🏠',Elektrik:'💡',Su:'💧','Doğalgaz':'🔥','İnternet':'📶',Personel:'👤',Vergi:'📑',Nakliye:'🚚','Diğer':'📌' };
+  const topGider = Object.values(turToplam).reduce((s,v)=>s+v,0);
+  const turEmoji = { Mustafa:'👤',Fatih:'👤',Muhasebe:'📑',Gün:'📅',Market:'🛒',Kira:'🏠',Elektrik:'💡',Su:'💧','Doğalgaz':'🔥','İnternet':'📶',Personel:'👥',Vergi:'🧾',Nakliye:'🚚','Diğer':'📌' };
   document.getElementById('raporGider').innerHTML = !topGider
     ? '<div class="empty"><div class="icon">📋</div><p>Bu dönemde gider yok</p></div>'
     : Object.entries(turToplam).sort((a,b)=>b[1]-a[1]).map(([tur,v]) => `
         <div class="ozet-row">
           <span class="ozet-label">${turEmoji[tur]||'📌'} ${tur}</span>
           <div style="text-align:right">
-            <span class="ozet-val amount-neg">${fmt(v)} ₺</span>
+            <span class="ozet-val amount-neg">${fmt(v)}</span>
             <div style="font-size:10px;color:var(--text3)">${Math.round(v/topGider*100)}%</div>
           </div>
         </div>`).join('');
 
-  // Toptancı
+  // ── Toptancı detayı ──
+  const topAlis   = Object.values(toptanciAlisByPara).reduce((s,v)=>s+v,0);
+  const topOdeme  = Object.values(toptanciOdemeByPara).reduce((s,v)=>s+v,0);
   document.getElementById('raporToptanci').innerHTML = !islemRows.length
     ? '<div class="empty"><div class="icon">🏭</div><p>Bu dönemde hareket yok</p></div>'
-    : `<div class="ozet-row"><span class="ozet-label">Toplam Alış</span><span class="amount-neg ozet-val">${fmt(topAlis)} ₺</span></div>
-       <div class="ozet-row"><span class="ozet-label">Toplam Ödeme</span><span class="amount-pos ozet-val">${fmt(topOdeme)} ₺</span></div>
-       <div class="ozet-row" style="border-top:2px solid var(--border);padding-top:12px;margin-top:4px">
-         <span style="font-weight:700">Net Borç Artışı</span>
-         <span class="ozet-val amount-neg">${fmt(topAlis - topOdeme)} ₺</span>
-       </div>` +
-       state.toptancilar.map(t => {
-         const alis = islemRows.filter(i=>i.toptanciId===t.id&&i.tur==='alis').reduce((s,i)=>s+i.tutar,0);
-         const odeme = islemRows.filter(i=>i.toptanciId===t.id&&i.tur==='odeme').reduce((s,i)=>s+i.tutar,0);
-         if (!alis && !odeme) return '';
-         return `<div class="ozet-row"><span class="ozet-label" style="font-size:11px">${t.adi}</span>
-           <span style="font-size:11px;color:var(--text2)">A:${fmt(alis)} / Ö:${fmt(odeme)}</span></div>`;
-       }).join('');
+    : Object.entries(toptanciAlisByPara).map(([p,v])=>
+        `<div class="ozet-row"><span class="ozet-label">🛒 Alış ${p}</span><span class="amount-neg ozet-val">${sym[p]||''}${fmt(v)}</span></div>`).join('')
+      + Object.entries(toptanciOdemeByPara).map(([p,v])=>
+        `<div class="ozet-row"><span class="ozet-label">💳 Ödeme ${p}</span><span class="amount-pos ozet-val">${sym[p]||''}${fmt(v)}</span></div>`).join('')
+      + state.toptancilar.map(t => {
+          const rows = islemRows.filter(i=>i.toptanciId===t.id);
+          if (!rows.length) return '';
+          const alisByPara={}, odemByPara={};
+          rows.forEach(i => {
+            const p=i.para||'TL';
+            if(i.tur==='alis') alisByPara[p]=(alisByPara[p]||0)+i.tutar;
+            else odemByPara[p]=(odemByPara[p]||0)+i.tutar;
+          });
+          const aliStr = Object.entries(alisByPara).map(([p,v])=>`A:${sym[p]||''}${fmt(v)}`).join(' ');
+          const oStr   = Object.entries(odemByPara).map(([p,v])=>`Ö:${sym[p]||''}${fmt(v)}`).join(' ');
+          return `<div class="ozet-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:8px">
+            <span class="ozet-label" style="font-size:12px;font-weight:700">${t.adi}</span>
+            <span style="font-size:11px;color:var(--text2)">${[aliStr,oStr].filter(Boolean).join(' / ')}</span>
+          </div>`;
+        }).join('');
 
-  // Döviz hareketleri
+  // ── Döviz hareketleri ──
   const dovizDetay = {};
   kasaRows.filter(k=>k.para!=='TL').forEach(k => {
     if (!dovizDetay[k.para]) dovizDetay[k.para] = { giris:0, cikis:0 };
     k.tur==='giris' ? dovizDetay[k.para].giris+=k.tutar : dovizDetay[k.para].cikis+=k.tutar;
   });
-  const symMap = {USD:'$',EUR:'€',GBP:'£',RUB:'₽'};
   const flagMap = {USD:'🇺🇸',EUR:'🇪🇺',GBP:'🇬🇧',RUB:'🇷🇺'};
   document.getElementById('raporDoviz').innerHTML = !Object.keys(dovizDetay).length
     ? '<div class="empty"><div class="icon">🌍</div><p>Bu dönemde döviz hareketi yok</p></div>'
@@ -2270,13 +2854,13 @@ function renderRapor() {
         <div class="ozet-row">
           <span class="ozet-label">${flagMap[c]||''} ${c}</span>
           <div style="text-align:right;font-size:12px">
-            <span class="amount-pos">+${symMap[c]}${fmt(d.giris)}</span>
+            <span class="amount-pos">+${sym[c]||''}${fmt(d.giris)}</span>
             <span style="color:var(--text3);margin:0 4px">/</span>
-            <span class="amount-neg">−${symMap[c]}${fmt(d.cikis)}</span>
+            <span class="amount-neg">−${sym[c]||''}${fmt(d.cikis)}</span>
           </div>
         </div>`).join('');
 
-  // Kasa detay tablosu
+  // ── Kasa detay tablosu ──
   const tbody = document.getElementById('raporKasaDetay');
   tbody.innerHTML = !kasaRows.length
     ? `<tr><td colspan="6"><div class="empty"><div class="icon">💰</div><p>Bu dönemde kasa hareketi yok</p></div></td></tr>`
@@ -2285,7 +2869,7 @@ function renderRapor() {
         <td><span class="badge ${k.tur==='giris'?'badge-green':'badge-red'}">${k.tur==='giris'?'📈 Giriş':'📉 Çıkış'}</span></td>
         <td class="${k.tur==='giris'?'amount-pos':'amount-neg'}">${k.tur==='giris'?'+':'−'}${fmt(k.tutar)}</td>
         <td><span class="badge badge-blue">${k.para}</span></td>
-        <td class="amount">${fmt(k.tutar * k.kur)} ₺</td>
+        <td class="amount">${fmt(k.tutar * (k.kur||1))} ₺</td>
         <td style="color:var(--text2)">${k.aciklama||'—'}</td>
       </tr>`).join('');
 }
@@ -2915,6 +3499,8 @@ function init() {
   renderOrtakFilter();
   updateOrtakKur();
   document.getElementById('ortakTarih').value = todayStr();
+  renderVadeHatirlatici();
+  renderEskiBorcOzet();
 }
 
 load();
