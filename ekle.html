@@ -42,7 +42,6 @@
 </style>
 </head>
 <body>
-
 <div id="app">
   <div class="spinner"></div>
   <div class="status">Yükleniyor...</div>
@@ -70,18 +69,78 @@ const USERS = [
   { id: 'u3', ad: 'Patrick' },
 ];
 
+const PRODUCTS = [
+  // 👜 ÇANTA
+  { id:'C001', name:'10 Euro Stand', cat:'Çanta', emoji:'👜', price:10, stock:99, qr:'C001' },
+  { id:'C002', name:'15 Euro Stand', cat:'Çanta', emoji:'👜', price:15, stock:99, qr:'C002' },
+  { id:'C005', name:'3 Gözlü', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C005' },
+  { id:'C004', name:'Baget', cat:'Çanta', emoji:'👜', price:15, stock:99, qr:'C004' },
+  { id:'C014', name:'Chanel 0.55', cat:'Çanta › Chanel', emoji:'👜', price:20, stock:99, qr:'C014' },
+  { id:'C015', name:'Chanel 1.55', cat:'Çanta › Chanel', emoji:'👜', price:25, stock:99, qr:'C015' },
+  { id:'C016', name:'Chanel 2.55', cat:'Çanta › Chanel', emoji:'👜', price:30, stock:99, qr:'C016' },
+  { id:'C030', name:'Coach', cat:'Çanta', emoji:'👜', price:30, stock:99, qr:'C030' },
+  { id:'C031', name:'Deri Sırtlık', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C031' },
+  { id:'C026', name:'Erkek Postacı', cat:'Çanta', emoji:'👜', price:25, stock:99, qr:'C026' },
+  { id:'C021', name:'Gucci', cat:'Çanta', emoji:'👜', price:25, stock:99, qr:'C021' },
+  { id:'C022', name:'Guess', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C022' },
+  { id:'C010', name:'Hermes', cat:'Çanta', emoji:'👜', price:45, stock:99, qr:'C010' },
+  { id:'C008', name:'Kova', cat:'Çanta', emoji:'👜', price:25, stock:99, qr:'C008' },
+  { id:'C023', name:'Kuzu Derisi', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C023' },
+  { id:'C032', name:'Laptop Çantası', cat:'Çanta', emoji:'👜', price:25, stock:99, qr:'C032' },
+  { id:'C025', name:'Libeskind', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C025' },
+  { id:'C027', name:'LW', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C027' },
+  { id:'C006', name:'Maymun', cat:'Çanta', emoji:'👜', price:40, stock:99, qr:'C006' },
+  { id:'C024', name:'MCM', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C024' },
+  { id:'C017', name:'Michael Kors', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C017' },
+  { id:'C009', name:'Neverfull', cat:'Çanta', emoji:'👜', price:25, stock:99, qr:'C009' },
+  { id:'C013', name:'Prada', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C013' },
+  { id:'C003', name:'Sunset', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C003' },
+  { id:'C029', name:'Telefonluk', cat:'Çanta', emoji:'👜', price:10, stock:99, qr:'C029' },
+  { id:'C020', name:'Totebag Büyük', cat:'Çanta › Totebag', emoji:'👜', price:35, stock:99, qr:'C020' },
+  { id:'C018', name:'Totebag Küçük', cat:'Çanta › Totebag', emoji:'👜', price:25, stock:99, qr:'C018' },
+  { id:'C019', name:'Totebag Orta', cat:'Çanta › Totebag', emoji:'👜', price:30, stock:99, qr:'C019' },
+  { id:'C011', name:'Yavrulu', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C011' },
+  { id:'C012', name:'YSL', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C012' },
+  { id:'C007', name:'Zarf', cat:'Çanta', emoji:'👜', price:35, stock:99, qr:'C007' },
+  { id:'C028', name:'Çocuk Grubu', cat:'Çanta', emoji:'👜', price:10, stock:99, qr:'C028' },
+  // 🧳 VALİZ
+  { id:'V001', name:'Küçük Valiz', cat:'Valiz', emoji:'🧳', price:25, stock:99, qr:'V001' },
+  { id:'V002', name:'Orta Valiz',  cat:'Valiz', emoji:'🧳', price:30, stock:99, qr:'V002' },
+  { id:'V003', name:'Büyük Valiz', cat:'Valiz', emoji:'🧳', price:40, stock:99, qr:'V003' },
+  // 🔗 KEMER
+  { id:'K002', name:'Deri Kemer', cat:'Kemer', emoji:'🔗', price:15, stock:99, qr:'K002' },
+  { id:'K001', name:'Plastik Kemer', cat:'Kemer', emoji:'🔗', price:5, stock:99, qr:'K001' },
+  // 💳 CÜZDAN
+  { id:'CU005', name:'Bayan Deri Büyük', cat:'Cüzdan', emoji:'💳', price:25, stock:99, qr:'CU005' },
+  { id:'CU003', name:'Bayan Deri Küçük', cat:'Cüzdan', emoji:'💳', price:15, stock:99, qr:'CU003' },
+  { id:'CU004', name:'Bayan Deri Orta', cat:'Cüzdan', emoji:'💳', price:20, stock:99, qr:'CU004' },
+  { id:'CU001', name:'Deri Kartlık', cat:'Cüzdan', emoji:'💳', price:15, stock:99, qr:'CU001' },
+  { id:'CU002', name:'Erkek Deri', cat:'Cüzdan', emoji:'💳', price:20, stock:99, qr:'CU002' },
+  { id:'CU006', name:'Plastik Cüzdan', cat:'Cüzdan', emoji:'💳', price:5, stock:99, qr:'CU006' },
+  // 🎒 SEYAHAT & SIRT
+  { id:'S006', name:'Büyük Seyahat', cat:'Seyahat & Sırt', emoji:'🎒', price:20, stock:99, qr:'S006' },
+  { id:'S003', name:'Büyük Sırt', cat:'Seyahat & Sırt', emoji:'🎒', price:20, stock:99, qr:'S003' },
+  { id:'S004', name:'Küçük Seyahat', cat:'Seyahat & Sırt', emoji:'🎒', price:10, stock:99, qr:'S004' },
+  { id:'S001', name:'Küçük Sırt', cat:'Seyahat & Sırt', emoji:'🎒', price:10, stock:99, qr:'S001' },
+  { id:'S005', name:'Orta Seyahat', cat:'Seyahat & Sırt', emoji:'🎒', price:15, stock:99, qr:'S005' },
+  { id:'S002', name:'Orta Sırt', cat:'Seyahat & Sırt', emoji:'🎒', price:15, stock:99, qr:'S002' },
+  // ✨ AKSESUAR
+  { id:'A003', name:'Kilit', cat:'Aksesuar', emoji:'🔒', price:5, stock:99, qr:'A003' },
+  { id:'A004', name:'Tartı', cat:'Aksesuar', emoji:'⚖️', price:10, stock:99, qr:'A004' },
+  { id:'A002', name:'Valiz Kemeri', cat:'Aksesuar', emoji:'✨', price:5, stock:99, qr:'A002' },
+  { id:'A001', name:'Valiz Kılıfı', cat:'Aksesuar', emoji:'✨', price:10, stock:99, qr:'A001' },
+];
+
 const urunId = new URLSearchParams(location.search).get('urun');
 const appEl = document.getElementById('app');
 
-async function loadProducts() {
-  try {
-    const snap = await getDoc(doc(collection(db, 'urunler'), 'liste'));
-    if (snap.exists() && snap.data().items) return snap.data().items;
-  } catch(e) {}
-  return [];
-}
+// Büyük/küçük harf duyarsız arama
+const prod = PRODUCTS.find(p =>
+  p.id.toUpperCase() === (urunId || '').toUpperCase() ||
+  (p.qr && p.qr.toUpperCase() === (urunId || '').toUpperCase())
+);
 
-async function addToCart(userId, prod) {
+async function addToCart(userId) {
   const snap = await getDoc(doc(collection(db, 'sepetler'), userId));
   let cart = (snap.exists() && snap.data().cart) ? snap.data().cart : [];
   const existing = cart.find(i => i.id === prod.id && i.price === prod.price);
@@ -90,21 +149,12 @@ async function addToCart(userId, prod) {
   await setDoc(doc(collection(db, 'sepetler'), userId), { cart, guncelleme: Date.now() });
 }
 
-async function init() {
-  if (!urunId) {
-    appEl.innerHTML = '<div class="error-msg">❌ Ürün ID bulunamadı</div>';
+function init() {
+  if (!urunId || !prod) {
+    appEl.innerHTML = `<div class="error-msg">❌ Ürün bulunamadı: ${urunId || '?'}</div>`;
     return;
   }
 
-  const products = await loadProducts();
-  const prod = products.find(p => p.id === urunId);
-
-  if (!prod) {
-    appEl.innerHTML = `<div class="error-msg">❌ Ürün bulunamadı: ${urunId}</div>`;
-    return;
-  }
-
-  // Ürün bilgisini göster, kullanıcı seçtir
   appEl.innerHTML = `
     <div class="emoji">${prod.emoji || '📦'}</div>
     <div class="prod-name">${prod.name}</div>
@@ -121,13 +171,12 @@ async function init() {
       const userName = USERS.find(u => u.id === userId)?.ad;
       appEl.innerHTML = `<div class="spinner"></div><div class="status">Ekleniyor...</div>`;
       try {
-        await addToCart(userId, prod);
+        await addToCart(userId);
         appEl.innerHTML = `
           <div class="emoji">✅</div>
           <div class="success">${prod.emoji} ${prod.name}<br>sepete eklendi</div>
           <div class="status" style="margin-top:12px">${userName} · Satış uygulamasına dönün</div>
         `;
-        // 2 saniye sonra kapat / geri git
         setTimeout(() => {
           if (window.history.length > 1) window.history.back();
           else window.close();
