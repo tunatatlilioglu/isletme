@@ -1780,36 +1780,49 @@ function renderStats() {
 // ============ QR SCANNER ============
 function openScanner() {
   document.getElementById('scannerOverlay').classList.add('active');
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-    .then(stream => {
-      scannerStream = stream;
-      const video = document.getElementById('scannerVideo');
-      video.srcObject = stream;
-      video.play();
-      scannerInterval = setInterval(scanFrame, 150);
-    })
-    .catch(() => {
-      // Demo: simulate QR scan with random product
-      setTimeout(() => {
-        const demo = PRODUCTS[Math.floor(Math.random() * PRODUCTS.length)];
-        showScanResult(demo);
-      }, 2000);
-    });
+  document.getElementById('scannerResult').style.display = 'none';
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+  })
+  .then(stream => {
+    scannerStream = stream;
+    const video = document.getElementById('scannerVideo');
+    video.srcObject = stream;
+    video.setAttribute('playsinline', true);
+    video.play().then(() => {
+      scannerInterval = setInterval(scanFrame, 100);
+    }).catch(e => console.error('Video play hatası:', e));
+  })
+  .catch(e => {
+    console.error('Kamera hatası:', e);
+    showToast('Kamera açılamadı: ' + e.message);
+  });
 }
 
 function scanFrame() {
   const video = document.getElementById('scannerVideo');
   const canvas = document.getElementById('scannerCanvas');
-  if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  if (!video || !canvas) return;
+  if (video.readyState < 2) return; // HAVE_CURRENT_DATA veya üstü
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  if (!w || !h) return;
+  canvas.width = w;
+  canvas.height = h;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0);
-  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const code = jsQR(img.data, img.width, img.height);
-  if (code) {
-    const prod = PRODUCTS.find(p => p.qr === code.data || p.id === code.data);
-    if (prod) showScanResult(prod);
+  ctx.drawImage(video, 0, 0, w, h);
+  let img;
+  try { img = ctx.getImageData(0, 0, w, h); } catch(e) { return; }
+  if (!window.jsQR) { console.warn('jsQR yüklenmedi'); return; }
+  const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+  if (code && code.data) {
+    console.log('QR okundu:', code.data);
+    const prod = PRODUCTS.find(p => p.qr === code.data || String(p.id) === String(code.data));
+    if (prod) { showScanResult(prod); return; }
+    // Ürün bulunamazsa ekranda göster
+    const el = document.getElementById('scannerResult');
+    el.textContent = '⚠️ Ürün bulunamadı: ' + code.data;
+    el.style.display = 'block';
   }
 }
 
