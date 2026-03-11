@@ -1767,19 +1767,20 @@ function openScanner() {
   const inp = document.getElementById('scanSearchInput');
   inp.value = '';
   document.getElementById('scanSearchResults').innerHTML = '';
+  const video = document.getElementById('scannerVideo');
+  const dbg = document.getElementById('scannerDebug');
 
-  // BarcodeDetector varsa kamerayla tara (Android Chrome + iOS 17+)
-  if ('BarcodeDetector' in window) {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
-    .then(stream => {
-      scannerStream = stream;
-      const video = document.getElementById('scannerVideo');
-      video.srcObject = stream;
-      video.style.display = 'block';
-      video.setAttribute('playsinline', true);
-      video.play();
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+  .then(stream => {
+    scannerStream = stream;
+    video.srcObject = stream;
+    video.style.display = 'block';
+    video.setAttribute('playsinline', true);
+    video.play();
+
+    if ('BarcodeDetector' in window) {
+      if (dbg) dbg.textContent = '📷 Barkod tarayıcı aktif';
       const detector = new BarcodeDetector({ formats: ['code_128', 'ean_13', 'ean_8', 'code_39', 'qr_code'] });
-      const dbg = document.getElementById('scannerDebug');
       const detect = () => {
         if (!scannerStream) return;
         detector.detect(video).then(codes => {
@@ -1788,16 +1789,21 @@ function openScanner() {
             if (dbg) dbg.textContent = '✅ ' + data;
             const prod = PRODUCTS.find(p => p.id === data || p.qr === data);
             if (prod) { closeScanner(); openProdModal(prod.id); return; }
-            if (dbg) dbg.textContent = '⚠️ Ürün bulunamadı: ' + data;
+            if (dbg) dbg.textContent = '⚠️ Bulunamadı: ' + data;
           }
           scannerInterval = setTimeout(detect, 300);
         }).catch(() => { scannerInterval = setTimeout(detect, 300); });
       };
       detect();
-    })
-    .catch(() => { /* kamera açılmadı, arama kutusu zaten görünüyor */ });
-  }
-  setTimeout(() => inp.focus(), 300);
+    } else {
+      if (dbg) dbg.textContent = '📷 Kamera açık — barkod tarama desteklenmiyor, aşağıdan arayın';
+    }
+  })
+  .catch(e => {
+    if (dbg) dbg.textContent = 'Kamera açılamadı: ' + e.message;
+  });
+
+  setTimeout(() => inp.focus(), 500);
 }
 
 function scanSearch(val) {
