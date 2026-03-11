@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<!-- v2.1 -->
 <title>İşletme Kasa Takip</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 <!-- Firebase SDK -->
@@ -463,18 +467,18 @@ tbody tr:last-child td { border-bottom: none; }
     <div class="pin-dot" id="dot5"></div>
   </div>
   <div class="pin-grid">
-    <button class="pin-btn" onclick="pinPress('1')">1</button>
-    <button class="pin-btn" onclick="pinPress('2')">2</button>
-    <button class="pin-btn" onclick="pinPress('3')">3</button>
-    <button class="pin-btn" onclick="pinPress('4')">4</button>
-    <button class="pin-btn" onclick="pinPress('5')">5</button>
-    <button class="pin-btn" onclick="pinPress('6')">6</button>
-    <button class="pin-btn" onclick="pinPress('7')">7</button>
-    <button class="pin-btn" onclick="pinPress('8')">8</button>
-    <button class="pin-btn" onclick="pinPress('9')">9</button>
+    <button class="pin-btn" data-pin="1">1</button>
+    <button class="pin-btn" data-pin="2">2</button>
+    <button class="pin-btn" data-pin="3">3</button>
+    <button class="pin-btn" data-pin="4">4</button>
+    <button class="pin-btn" data-pin="5">5</button>
+    <button class="pin-btn" data-pin="6">6</button>
+    <button class="pin-btn" data-pin="7">7</button>
+    <button class="pin-btn" data-pin="8">8</button>
+    <button class="pin-btn" data-pin="9">9</button>
     <button class="pin-btn empty"></button>
-    <button class="pin-btn" onclick="pinPress('0')">0</button>
-    <button class="pin-btn del" onclick="pinDel()">⌫</button>
+    <button class="pin-btn" data-pin="0">0</button>
+    <button class="pin-btn del" id="pinDelBtn">⌫</button>
   </div>
   <div class="login-error" id="loginError"></div>
 </div>
@@ -1471,7 +1475,8 @@ function updateKasaPinDots() {
 }
 
 function checkKasaPin() {
-  const user = KASA_USERS.find(u => u.pin === kasaPinBuffer);
+  const enteredPin = kasaPinBuffer;
+  const user = KASA_USERS.find(u => u.pin === enteredPin);
   if (user) {
     kasaCurrentUser = user;
     const ls = document.getElementById('loginScreen');
@@ -3504,8 +3509,30 @@ function init() {
 }
 
 load();
-// NOT: init(), fetchKurlar() ve Firebase listener artık
-// checkKasaPin() içinde PIN doğrulandıktan sonra çağrılıyor.
+
+// PIN buton event listener'ları (type="module" scope sorunu çözümü)
+document.querySelectorAll('.pin-btn[data-pin]').forEach(btn => {
+  btn.addEventListener('click', () => pinPress(btn.dataset.pin));
+});
+document.getElementById('pinDelBtn')?.addEventListener('click', pinDel);
+
+// ── Global scope export ──
+Object.assign(window, {
+  kasaLogout,
+  showPage, kasaEkle, kasaSil, fetchKurlar, openKurPanel, closeKurPanel, toggleKurPanel, saveManuelKur,
+  gbEkle, gbOdendi, gbSil, renderGecmisBorc,
+  openToptanciModal, toptanciEkle, toptanciSil,
+  openIslemModal, islemEkle, islemSil, islemTurDegisti, odemeYontemiDegisti,
+  openEskiBorcModal, eskiBorcEkle, eskiBorcSil, toggleEskiBorcDetay,
+  renderToptanciIslemler,
+  giderEkle, giderSil,
+  openPrintPanel, closePrintPanel, printRapor, setRaporDon, renderRapor,
+  backupData, restoreData,
+  openOrtakModal, ortakEkle, ortakIslemEkle, ortakIslemSil, renderOrtakSayfasi,
+  updateOrtakKur, renderOrtakFilter,
+  openKarZararModal,
+});
+
 </script>
 </body>
 </html>

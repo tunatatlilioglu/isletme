@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<!-- v2.1 -->
 <title>Satış Modülü Demo</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
@@ -547,18 +551,18 @@ window._fbInit = function(cb) {
     <div class="pin-dot" id="dot5"></div>
   </div>
   <div class="pin-grid">
-    <button class="pin-btn" onclick="pinPress('1')">1</button>
-    <button class="pin-btn" onclick="pinPress('2')">2</button>
-    <button class="pin-btn" onclick="pinPress('3')">3</button>
-    <button class="pin-btn" onclick="pinPress('4')">4</button>
-    <button class="pin-btn" onclick="pinPress('5')">5</button>
-    <button class="pin-btn" onclick="pinPress('6')">6</button>
-    <button class="pin-btn" onclick="pinPress('7')">7</button>
-    <button class="pin-btn" onclick="pinPress('8')">8</button>
-    <button class="pin-btn" onclick="pinPress('9')">9</button>
+    <button class="pin-btn" data-pin="1">1</button>
+    <button class="pin-btn" data-pin="2">2</button>
+    <button class="pin-btn" data-pin="3">3</button>
+    <button class="pin-btn" data-pin="4">4</button>
+    <button class="pin-btn" data-pin="5">5</button>
+    <button class="pin-btn" data-pin="6">6</button>
+    <button class="pin-btn" data-pin="7">7</button>
+    <button class="pin-btn" data-pin="8">8</button>
+    <button class="pin-btn" data-pin="9">9</button>
     <button class="pin-btn empty"></button>
-    <button class="pin-btn" onclick="pinPress('0')">0</button>
-    <button class="pin-btn del" onclick="pinDel()">⌫</button>
+    <button class="pin-btn" data-pin="0">0</button>
+    <button class="pin-btn del" id="pinDelBtn">⌫</button>
   </div>
   <div class="login-user-name" id="loginUserName"></div>
   <div class="login-error" id="loginError"></div>
@@ -1878,6 +1882,25 @@ function showToast(msg) {
 
 // Modal price → total sync
 document.getElementById('modalPrice')?.addEventListener('input', updateModalTotal);
+
+// PIN buton event listener'ları (type="module" scope sorunu çözümü)
+document.querySelectorAll('.pin-btn[data-pin]').forEach(btn => {
+  btn.addEventListener('click', () => pinPress(btn.dataset.pin));
+});
+document.getElementById('pinDelBtn')?.addEventListener('click', pinDel);
+
+// ── Global scope export ──
+Object.assign(window, {
+  logout,
+  showTab, filterCat, filterSubCat, filterProds, toggleGroup,
+  openProdModal, closeModal, addToCart, updateModalTotal,
+  removeFromCart, clearCart, completeSale,
+  showAllSales, satisSil,
+  renderQrPage, toggleQrSelect, selectAllQr, deselectAllQr, printQrGrid, printQrLabels,
+  urunEkle, urunSil,
+  renderAyarlar, openKulModal, closeKulModal, kullaniciKaydet, kullaniciEkle, kullaniciSil, pinSifirla,
+  startScanner, stopScanner,
+});
 
 init();
 </script>
