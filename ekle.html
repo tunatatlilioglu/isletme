@@ -137,11 +137,26 @@ const appEl = document.getElementById('app');
 const savedUserId = sessionStorage.getItem('ekleUserId');
 const savedUserName = sessionStorage.getItem('ekleUserName');
 
-// Büyük/küçük harf duyarsız arama
-const prod = PRODUCTS.find(p =>
-  p.id.toUpperCase() === (urunId || '').toUpperCase() ||
-  (p.qr && p.qr.toUpperCase() === (urunId || '').toUpperCase())
-);
+// Firebase'den ürün listesini çek, bulamazsa hardcoded listeye bak
+let prod = null;
+try {
+  const snap = await getDoc(doc(collection(db, 'urunler'), 'liste'));
+  if (snap.exists() && snap.data().products?.length) {
+    const fbProducts = snap.data().products;
+    prod = fbProducts.find(p =>
+      p.id.toUpperCase() === (urunId || '').toUpperCase() ||
+      (p.qr && p.qr.toUpperCase() === (urunId || '').toUpperCase())
+    );
+  }
+} catch(e) {}
+
+// Firebase'de yoksa hardcoded listede ara
+if (!prod) {
+  prod = PRODUCTS.find(p =>
+    p.id.toUpperCase() === (urunId || '').toUpperCase() ||
+    (p.qr && p.qr.toUpperCase() === (urunId || '').toUpperCase())
+  );
+}
 
 async function addToCart(userId) {
   const snap = await getDoc(doc(collection(db, 'sepetler'), userId));
