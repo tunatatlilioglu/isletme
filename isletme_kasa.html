@@ -87,26 +87,25 @@ window.addEventListener('unhandledrejection', function(e) {
 
 <nav>
   <div class="nav-brand">
-    <div class="nav-brand-icon">💼</div>
+    <div class="nav-brand-icon">K</div>
     <h1>Kasa &amp; Hesap</h1>
   </div>
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('kasa',this)">💰 <span class="label">Kasa</span></button>
-    <button class="nav-tab" onclick="showPage('toptanci',this)">🏭 <span class="label">Toptancılar</span></button>
-    <button class="nav-tab" onclick="showPage('gider',this)">📋 <span class="label">Giderler</span></button>
-    <button class="nav-tab" onclick="showPage('gecmis-borc',this)">🕰 <span class="label">Geçmiş Borç</span></button>
-    <button class="nav-tab" onclick="showPage('ozet',this)">📊 <span class="label">Özet</span></button>
-    <button class="nav-tab" onclick="showPage('rapor',this)">📅 <span class="label">Rapor</span></button>
-    <button class="nav-tab" onclick="showPage('ortaklar',this)">🤝 <span class="label">Ortaklar</span></button>
-    <button class="nav-tab" onclick="showPage('karzarar',this)">📈 <span class="label">Kâr/Zarar</span></button>
+    <button class="nav-tab active" onclick="showPage('kasa',this)"><span class="label">Kasa</span></button>
+    <button class="nav-tab" onclick="showPage('toptanci',this)"><span class="label">Toptancilar</span></button>
+    <button class="nav-tab" onclick="showPage('gider',this)"><span class="label">Giderler</span></button>
+    <button class="nav-tab" onclick="showPage('gecmis-borc',this)"><span class="label">Gecmis Borc</span></button>
+    <button class="nav-tab" onclick="showPage('ozet',this)"><span class="label">Ozet</span></button>
+    <button class="nav-tab" onclick="showPage('rapor',this)"><span class="label">Rapor</span></button>
+    <button class="nav-tab" onclick="showPage('ortaklar',this)"><span class="label">Ortaklar</span></button>
+    <button class="nav-tab" onclick="showPage('karzarar',this)"><span class="label">Kar/Zarar</span></button>
   </div>
   <div class="nav-actions">
-    <span id="syncStatus" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--bg);color:var(--text3)">⏳ Bağlanıyor...</span>
-    <span class="nav-user" id="navUser">👤 —</span>
-
-    <button class="btn btn-secondary btn-sm" onclick="openPrintPanel()">🖨 Yazdır</button>
-    <button class="btn btn-secondary btn-sm" onclick="backupData()">💾 Yedek</button>
-    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('restoreInput').click()">📂 Yükle</button>
+    <span id="syncStatus" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--bg);color:var(--text3)">Baglanıyor...</span>
+    <span class="nav-user" id="navUser">-- </span>
+    <button class="btn btn-secondary btn-sm" onclick="openPrintPanel()">Yazdir</button>
+    <button class="btn btn-secondary btn-sm" onclick="backupData()">Yedek</button>
+    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('restoreInput').click()">Yukle</button>
     <input type="file" id="restoreInput" accept=".json" onchange="restoreData(event)" style="display:none">
   </div>
 </nav>
