@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kasa Test 3</title>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+try {
+  const app = initializeApp({
+    apiKey: "AIzaSyAJFmBJpgrZEDlbFqRS_itUU_lEZklHEPg",
+    authDomain: "isletme-kasa.firebaseapp.com",
+    projectId: "isletme-kasa",
+    storageBucket: "isletme-kasa.firebasestorage.app",
+    messagingSenderId: "644544266522",
+    appId: "1:644544266522:web:fc70d2374a382ce0aa6ca3"
+  });
+  const db = getFirestore(app);
+  window._fb = { db, fbReady: true };
+  document.getElementById('durum').textContent = '✅ Firebase bağlandı';
+} catch(e) {
+  document.getElementById('durum').textContent = '❌ Firebase hatası: ' + e.message;
+}
+</script>
+</head>
+<body>
+<h1>Test 3</h1>
+<p id="durum">Firebase yükleniyor...</p>
+<script src="/isletme/kasa.js"></script>
+<script>document.body.innerHTML += '<p>✅ kasa.js yüklendi</p>';</script>
+</body>
+</html>
