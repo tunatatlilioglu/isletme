@@ -106,9 +106,8 @@ window.addEventListener('unhandledrejection', function(e) {
 
     <button class="btn btn-secondary btn-sm" onclick="openPrintPanel()">🖨 Yazdır</button>
     <button class="btn btn-secondary btn-sm" onclick="backupData()">💾 Yedek</button>
-    <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0">
-      📂 Yükle <input type="file" accept=".json" onchange="restoreData(event)" style="display:none">
-    </label>
+    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('restoreInput').click()">📂 Yükle</button>
+    <input type="file" id="restoreInput" accept=".json" onchange="restoreData(event)" style="display:none">
   </div>
 </nav>
 
