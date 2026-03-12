@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- PWA -->
-<!-- manifest devre disi -->
+<link rel="manifest" href="/isletme/manifest-kasa.json">
 <meta name="theme-color" content="#10b981">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -64,7 +64,7 @@ window.addEventListener('unhandledrejection', function(e) {
 <!-- PIN GİRİŞ EKRANI -->
 <div class="login-screen" id="loginScreen">
   <div class="login-logo">💼</div>
-  <div class="login-title">Kasa & Hesap</div>
+  <div class="login-title">Kasa &amp; Hesap</div>
   <div class="login-sub">Kim giriş yapıyor?</div>
   <div style="display:flex;flex-direction:column;gap:14px;margin-top:24px;width:100%;max-width:280px">
     <button onclick="kasaSelectUser('u1')" style="padding:18px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">👤 Mustafa</button>
@@ -74,7 +74,7 @@ window.addEventListener('unhandledrejection', function(e) {
 <div id="printDocHeader">
   <div class="ph-top">
     <div>
-      <h1>💼 İşletme Kasa & Hesap</h1>
+      <h1>💼 İşletme Kasa &amp; Hesap</h1>
       <div class="ph-sub" id="phSubTitle">Rapor</div>
       <div class="ph-period" id="phPeriod"></div>
     </div>
@@ -88,7 +88,7 @@ window.addEventListener('unhandledrejection', function(e) {
 <nav>
   <div class="nav-brand">
     <div class="nav-brand-icon">💼</div>
-    <h1>Kasa & Hesap</h1>
+    <h1>Kasa &amp; Hesap</h1>
   </div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('kasa',this)">💰 <span class="label">Kasa</span></button>
@@ -702,7 +702,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <!-- Gelir-Gider tablosu -->
   <div class="grid-2 section-gap">
     <div class="card">
-      <div class="card-title">📊 Gelir & Gider Özeti</div>
+      <div class="card-title">📊 Gelir &amp; Gider Özeti</div>
       <div id="kzGelirGider"></div>
     </div>
     <div class="card">
