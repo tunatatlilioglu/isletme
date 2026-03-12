@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kasa Test 22</title>
+<link rel="stylesheet" href="/isletme/kasa.css">
+</head>
+<body>
+<div id="__hata" style="display:none;position:fixed;inset:0;z-index:9999;background:#fff;padding:24px;font-family:sans-serif;font-size:13px;overflow:auto;white-space:pre-wrap;color:#c00;word-break:break-all"></div>
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  var el = document.getElementById('__hata');
+  if (el) { el.style.display='block'; el.textContent += 'HATA: ' + msg + '\nSatır: ' + line + '\n\n'; }
+  return false;
+};
+window.addEventListener('unhandledrejection', function(e) {
+  var el = document.getElementById('__hata');
+  if (el) { el.style.display='block'; el.textContent += 'PROMISE HATA: ' + (e.reason?.message || e.reason || e) + '\n\n'; }
+});
+</script>
+
+<!-- PIN GİRİŞ EKRANI -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-logo">💼</div>
+  <div class="login-title">Kasa &amp; Hesap</div>
+  <div class="login-sub">Kim giriş yapıyor?</div>
+  <div style="display:flex;flex-direction:column;gap:14px;margin-top:24px;width:100%;max-width:280px">
+    <button onclick="kasaSelectUser('u1')" style="padding:18px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">👤 Mustafa</button>
+    <button onclick="kasaSelectUser('u2')" style="padding:18px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">👤 Fatih</button>
+  </div>
+</div>
+<div id="printDocHeader">
+  <div class="ph-top">
+    <div>
+      <h1>💼 İşletme Kasa &amp; Hesap</h1>
+      <div class="ph-sub" id="phSubTitle">Rapor</div>
+      <div class="ph-period" id="phPeriod"></div>
+    </div>
+    <div class="ph-meta">
+      <div id="phDate"></div>
+      <div id="phUser"></div>
+    </div>
+  </div>
+</div>
+
+<div class="page active" id="page-kasa">
+  <div id="kurBar" class="kur-bar">
+    <div class="kur-item">
+      <span class="kur-flag">🇺🇸</span>
+      <div class="kur-info"><div class="kur-code">USD</div><div class="kur-val" id="kur-usd">—</div></div>
+    </div>
+    <div class="kur-sep"></div>
+    <div class="kur-item">
+      <span class="kur-flag">🇪🇺</span>
+      <div class="kur-info"><div class="kur-code">EUR</div><div class="kur-val" id="kur-eur">—</div></div>
+    </div>
+    <div class="kur-sep"></div>
+    <div class="kur-item">
+      <span class="kur-flag">🇬🇧</span>
+      <div class="kur-info"><div class="kur-code">GBP</div><div class="kur-val" id="kur-gbp">—</div></div>
+    </div>
+    <div class="kur-sep"></div>
+    <div class="kur-item">
+      <span class="kur-flag">🇷🇺</span>
+      <div class="kur-info"><div class="kur-code">RUB</div><div class="kur-val" id="kur-rub">—</div></div>
+    </div>
+    <div class="kur-update" id="kurUpdateTime">Yükleniyor...</div>
+    <button class="kur-refresh" onclick="fetchKurlar()">↻ Güncelle</button>
+    <a href="https://www.tcmb.gov.tr/kurlar/today.xml" target="_blank" class="kur-refresh" style="text-decoration:none">🔗 TCMB</a>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card blue">
+      <div class="stat-icon">₺</div>
+      <div class="stat-label">Kasa TL</div>
+      <div class="stat-value" id="stat-tl">0,00 ₺</div>
+      <div class="stat-sub">Toplam TL bakiye</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon">€</div>
+      <div class="stat-label">Kasa EUR</div>
+<p style="color:green;font-size:20px;padding:20px;position:fixed;bottom:0;z-index:9999">OK</p>
+</body></html>
