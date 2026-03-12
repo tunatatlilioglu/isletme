@@ -381,6 +381,7 @@ tbody tr:last-child td { border-bottom: none; }
     border-radius: 20px; font-size: 9pt; font-weight: 700;
   }
 
+/* ---- LOGIN SCREEN ---- */
   /* ---- PIN LOGIN ---- */
   .login-screen {
     position: fixed; inset: 0; z-index: 1500;
