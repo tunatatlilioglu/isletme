@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kasa Test 11</title>
+<link rel="stylesheet" href="/isletme/kasa.css">
+</head>
+<body>
+<div id="__hata" style="display:none;position:fixed;inset:0;z-index:9999;background:#fff;padding:24px;font-family:sans-serif;font-size:13px;overflow:auto;white-space:pre-wrap;color:#c00;word-break:break-all"></div>
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  var el = document.getElementById('__hata');
+  if (el) { el.style.display='block'; el.textContent += 'HATA: ' + msg + '\nSatır: ' + line + '\n\n'; }
+  return false;
+};
+window.addEventListener('unhandledrejection', function(e) {
+  var el = document.getElementById('__hata');
+  if (el) { el.style.display='block'; el.textContent += 'PROMISE HATA: ' + (e.reason?.message || e.reason || e) + '\n\n'; }
+});
+</script>
+
+<!-- PIN GİRİŞ EKRANI -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-logo">💼</div>
+  <div class="login-title">Kasa & Hesap</div>
+  <div class="login-sub">Kim giriş yapıyor?</div>
+  <div style="display:flex;flex-direction:column;gap:14px;margin-top:24px;width:100%;max-width:280px">
+    <button onclick="kasaSelectUser('u1')" style="padding:18px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">👤 Mustafa</button>
+    <button onclick="kasaSelectUser('u2')" style="padding:18px;border-radius:14px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">👤 Fatih</button>
+  </div>
+</div>
+<div id="printDocHeader">
+  <div class="ph-top">
+    <div>
+      <h1>💼 İşletme Kasa & Hesap</h1>
+      <div class="ph-sub" id="phSubTitle">Rapor</div>
+      <div class="ph-period" id="phPeriod"></div>
+    </div>
+    <div class="ph-meta">
+      <div id="phDate"></div>
+      <div id="phUser"></div>
+    </div>
+  </div>
+</div>
+
+<nav>
+  <div class="nav-brand">
+    <div class="nav-brand-icon">💼</div>
+    <h1>Kasa & Hesap</h1>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('kasa',this)">💰 <span class="label">Kasa</span></button>
+    <button class="nav-tab" onclick="showPage('toptanci',this)">🏭 <span class="label">Toptancılar</span></button>
+    <button class="nav-tab" onclick="showPage('gider',this)">📋 <span class="label">Giderler</span></button>
+    <button class="nav-tab" onclick="showPage('gecmis-borc',this)">🕰 <span class="label">Geçmiş Borç</span></button>
+    <button class="nav-tab" onclick="showPage('ozet',this)">📊 <span class="label">Özet</span></button>
+    <button class="nav-tab" onclick="showPage('rapor',this)">📅 <span class="label">Rapor</span></button>
+    <button class="nav-tab" onclick="showPage('ortaklar',this)">🤝 <span class="label">Ortaklar</span></button>
+    <button class="nav-tab" onclick="showPage('karzarar',this)">📈 <span class="label">Kâr/Zarar</span></button>
+  </div>
+  <div class="nav-actions">
+    <span id="syncStatus" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--bg);color:var(--text3)">⏳ Bağlanıyor...</span>
+    <span class="nav-user" id="navUser">👤 —</span>
+
+    <button class="btn btn-secondary btn-sm" onclick="openPrintPanel()">🖨 Yazdır</button>
+    <button class="btn btn-secondary btn-sm" onclick="backupData()">💾 Yedek</button>
+    <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0">
+      📂 Yükle <input type="file" accept=".json" onchange="restoreData(event)" style="display:none">
+    </label>
+  </div>
+</nav>
+
+<!-- ========== KASA ========== -->
+<div class="page active" id="page-kasa">
+  <div id="kurBar" class="kur-bar">
+    <div class="kur-item">
+      <span class="kur-flag">🇺🇸</span>
+      <div class="kur-info"><div class="kur-code">USD</div><div class="kur-val" id="kur-usd">—</div></div>
+    </div>
+    <div class="kur-sep"></div>
+    <div class="kur-item">
+      <span class="kur-flag">🇪🇺</span>
+      <div class="kur-info"><div class="kur-code">EUR</div><div class="kur-val" id="kur-eur">—</div></div>
+    </div>
+    <div class="kur-sep"></div>
+    <div class="kur-item">
+      <span class="kur-flag">🇬🇧</span>
+      <div class="kur-info"><div class="kur-code">GBP</div><div class="kur-val" id="kur-gbp">—</div></div>
+    </div>
+    <div class="kur-sep"></div>
+    <div class="kur-item">
+      <span class="kur-flag">🇷🇺</span>
+      <div class="kur-info"><div class="kur-code">RUB</div><div class="kur-val" id="kur-rub">—</div></div>
+    </div>
+    <div class="kur-update" id="kurUpdateTime">Yükleniyor...</div>
+    <button class="kur-refresh" onclick="fetchKurlar()">↻ Güncelle</button>
+    <a href="https://www.tcmb.gov.tr/kurlar/today.xml" target="_blank" class="kur-refresh" style="text-decoration:none">🔗 TCMB</a>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card blue">
+      <div class="stat-icon">₺</div>
+      <div class="stat-label">Kasa TL</div>
+      <div class="stat-value" id="stat-tl">0,00 ₺</div>
+      <div class="stat-sub">Toplam TL bakiye</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon">€</div>
+      <div class="stat-label">Kasa EUR</div>
+      <div class="stat-value green" id="stat-eur">0,00 €</div>
+      <div class="stat-sub">Toplam Euro bakiye</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-icon">$</div>
+      <div class="stat-label">Kasa USD</div>
+      <div class="stat-value" id="stat-usd">0,00 $</div>
+      <div class="stat-sub">Toplam Dolar bakiye</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-icon">£</div>
+      <div class="stat-label">Kasa GBP</div>
+      <div class="stat-value" id="stat-gbp">0,00 £</div>
+      <div class="stat-sub">Toplam Sterlin bakiye</div>
+    </div>
+  </div>
+
+  <!-- Vadeli borç / senet hatırlatıcısı -->
+  <div id="vadeHatirlatici" style="display:none;margin-top:14px"></div>
+
+  <div class="card section-gap">
+    <div class="card-title">➕ Kasa Hareketi Ekle</div>
+    <div class="form-row">
+      <div class="form-group fixed" style="min-width:110px">
+        <label>Tür</label>
+        <select id="kasaTur">
+          <option value="giris">📈 Giriş</option>
+          <option value="cikis">📉 Çıkış</option>
+        </select>
+      </div>
+      <div class="form-group fixed" style="min-width:90px">
+        <label>Para Birimi</label>
+        <select id="kasaPara" onchange="updateKasaKur()">
+          <option value="TL">₺ TL</option>
+          <option value="USD">$ USD</option>
+          <option value="EUR">€ EUR</option>
+          <option value="GBP">£ GBP</option>
+          <option value="RUB">₽ RUB</option>
+        </select>
+      </div>
+      <div class="form-group fixed" style="min-width:130px">
+        <label>Tutar</label>
+        <input type="number" id="kasaTutar" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="form-group fixed" style="min-width:110px" id="kasaKurGroup">
+        <label>Kur (TL)</label>
+        <input type="number" id="kasaKur" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Açıklama</label>
+        <input type="text" id="kasaAciklama" placeholder="Açıklama girin...">
+      </div>
+      <div class="form-group fixed" style="min-width:130px">
+        <label>Tarih</label>
+        <input type="date" id="kasaTarih">
+      </div>
+      <div class="form-group fixed" style="min-width:100px">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="kasaEkle()">+ Ekle</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="justify-content:space-between">
+      <span>📒 Kasa Hareketleri</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="date" id="kasaFilterTarih" style="width:150px;font-size:12px" onchange="renderKasa()">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('kasaFilterTarih').value='';renderKasa()">Tümü</button>
+        
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Tür</th>
+            <th>Tutar</th>
+            <th>Para</th>
+            <th>Kur</th>
+            <th>TL Karşılığı</th>
+            <th>Açıklama</th>
+            <th>👤 Kişi</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="kasaTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Satışlar -->
+  <div class="card section-gap">
+    <div class="card-title" style="justify-content:space-between">
+      🧾 Satışlar
+      <span id="satisSyncStatus" style="font-size:11px;font-weight:600;color:var(--green)"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Ürünler</th>
+            <th>Tutar</th>
+            <th>👤 Kişi</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="kasaSatislarListesi"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========== GEÇMİŞ BORÇ ========== -->
+<div class="page" id="page-gecmis-borc">
+
+  <!-- Özet kartı -->
+  <div class="stat-grid" style="margin-bottom:16px">
+    <div class="stat-card red" style="grid-column:1/-1">
+      <div class="stat-icon">🕰</div>
+      <div class="stat-label">Toplam Geçmiş Borç</div>
+      <div class="stat-value red" id="gecmisBorcToplam">0,00</div>
+      <div class="stat-sub" id="gecmisBorcParaBirimi">—</div>
+    </div>
+  </div>
+
+  <!-- Yeni kayıt ekle -->
+  <div class="card section-gap">
+    <div class="card-title">➕ Borç Kalemi Ekle</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Açıklama</label>
+        <input type="text" id="gbAciklama" placeholder="Kime, neden, hangi dönem...">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group fixed" style="min-width:110px">
+        <label>Para Birimi</label>
+        <select id="gbPara">
+          <option value="EUR">€ EUR</option>
+          <option value="TL">₺ TL</option>
+          <option value="USD">$ USD</option>
+          <option value="GBP">£ GBP</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tutar</label>
+        <input type="number" id="gbTutar" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-group fixed" style="min-width:140px">
+        <label>Tarih</label>
+        <input type="date" id="gbTarih">
+      </div>
+    </div>
+    <div class="form-row">
+      <button class="btn btn-primary" onclick="gbEkle()">+ Ekle</button>
+    </div>
+  </div>
+
+  <!-- Liste -->
+  <div class="card">
+    <div class="card-title" style="justify-content:space-between">
+      📋 Borç Kalemleri
+      <select id="gbFilterPara" onchange="renderGecmisBorc()" style="font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface)">
+        <option value="">Tümü</option>
+        <option value="EUR">EUR</option>
+        <option value="TL">TL</option>
+        <option value="USD">USD</option>
+        <option value="GBP">GBP</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Açıklama</th>
+            <th>Tutar</th>
+            <th>Para</th>
+            <th>Durum</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="gecmisBorcTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-toptanci">
+  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="openToptanciModal()">+ Toptancı Ekle</button>
+    <button class="btn btn-success" onclick="openIslemModal()">+ Alış / Ödeme / İade</button>
+    <button class="btn btn-secondary" onclick="openEskiBorcModal()">🕰 Eski Borç Ekle</button>
+  </div>
+
+  <div class="grid-2 section-gap" id="toptanciKartlar"></div>
+
+  <!-- Eski borç özet kontrolü -->
+  <div class="card section-gap" id="eskiBorcOzetKart" style="display:none">
+    <div class="card-title" style="justify-content:space-between">
+      🕰 Eski Toptancı Borçları
+      <button onclick="toggleEskiBorcDetay()" id="eskiBorcToggleBtn" style="background:rgba(245,158,11,.12);border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700;color:var(--accent)">▼ Detay</button>
+    </div>
+    <div id="eskiBorcOzet"></div>
+    <div id="eskiBorcDetay" style="display:none;margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="justify-content:space-between">
+      <span>📋 Toptancı Hareketleri</span>
+      <div style="display:flex;gap:8px;align-items:center">
+      <select id="toptanciFilter" style="width:180px;font-size:12px" onchange="renderToptanciIslemler()">
+        <option value="">Tüm Toptancılar</option>
+      </select></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Toptancı</th>
+            <th>İşlem</th>
+            <th>Tutar</th>
+            <th>Para</th>
+            <th>Açıklama</th>
+            <th>Bakiye</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="toptanciIslemTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========== GİDER ========== -->
+<div class="page" id="page-gider">
+  <div class="card section-gap">
+    <div class="card-title">📋 Gider Ekle</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Gider Türü</label>
+        <select id="giderTur">
+          <option value="Muhasebe">📑 Muhasebe</option>
+          <option value="Gün">📅 Gün</option>
+          <option value="Market">🛒 Market</option>
+          <option value="Kira">🏠 Kira</option>
+          <option value="Elektrik">💡 Elektrik</option>
+          <option value="Su">💧 Su</option>
+          <option value="Doğalgaz">🔥 Doğalgaz</option>
+          <option value="İnternet">📶 İnternet</option>
+          <option value="Personel">👥 Personel</option>
+          <option value="Vergi">🧾 Vergi</option>
+          <option value="Nakliye">🚚 Nakliye</option>
+          <option value="Diğer">📌 Diğer</option>
+        </select>
+      </div>
+      <div class="form-group fixed" style="min-width:90px">
+        <label>Para Birimi</label>
+        <select id="giderPara">
+          <option value="TL">₺ TL</option>
+          <option value="EUR">€ EUR</option>
+          <option value="USD">$ USD</option>
+          <option value="GBP">£ GBP</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tutar</label>
+        <input type="number" id="giderTutar" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Açıklama</label>
+        <input type="text" id="giderAciklama" placeholder="Açıklama...">
+      </div>
+      <div class="form-group fixed" style="min-width:140px">
+        <label>Tarih</label>
+        <input type="date" id="giderTarih">
+      </div>
+      <div class="form-group fixed" style="min-width:130px">
+        <label>👤 Kimin Adına</label>
+        <select id="giderOrtak">
+          <option value="">— İşletme Gideri —</option>
+        </select>
+      </div>
+      <div class="form-group fixed" style="min-width:100px">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="giderEkle()">+ Ekle</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2 section-gap">
+    <div class="stat-card red">
+      <div class="stat-icon">📋</div>
+      <div class="stat-label">Bu Ay Gider</div>
+      <div class="stat-value red" id="stat-ay-gider">0,00 ₺</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-icon">📅</div>
+      <div class="stat-label">Bu Yıl Gider</div>
+      <div class="stat-value" id="stat-yil-gider">0,00 ₺</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="justify-content:space-between"><span>📋 Gider Listesi</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tarih</th><th>Tür</th><th>Tutar</th><th>Para</th><th>Açıklama</th><th>Ortak</th><th></th></tr>
+        </thead>
+        <tbody id="giderTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ÖZET ========== -->
+<div class="page" id="page-ozet">
+
+  <!-- NET BİLANÇO — en üstte tam genişlik -->
+  <div class="card section-gap" style="border:2px solid rgba(16,185,129,.3);margin-bottom:16px">
+    <div class="card-title" style="font-size:14px">🧮 Net Bilanço (Tüm Zamanlar)</div>
+    <div id="ozetNetBilanco"></div>
+  </div>
+
+  <div class="grid-2 section-gap">
+    <div class="card">
+      <div class="card-title">💰 Kasa Özeti</div>
+      <div id="ozetKasa"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🌍 Döviz Pozisyonu</div>
+      <div id="ozetDoviz"></div>
+    </div>
+  </div>
+  <div class="grid-2 section-gap">
+    <div class="card">
+      <div class="card-title">🏭 Toptancı Borç Durumu</div>
+      <div id="ozetBorc"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Gider Dağılımı</div>
+      <div id="ozetGider"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== RAPOR ========== -->
+<div class="page" id="page-rapor">
+  <div class="card section-gap">
+    <div class="card-title">📅 Dönem Raporu</div>
+    <div class="tab-pills">
+      <button class="tab-pill active" onclick="setRaporDon('hafta',this)">Bu Hafta</button>
+      <button class="tab-pill" onclick="setRaporDon('ay',this)">Bu Ay</button>
+      <button class="tab-pill" onclick="setRaporDon('yil',this)">Bu Yıl</button>
+      <button class="tab-pill" onclick="setRaporDon('ozel',this)">Özel Aralık</button>
+    </div>
+    <div id="raporOzelAralik" style="display:none;margin-bottom:16px">
+      <div class="form-row" style="margin-bottom:0">
+        <div class="form-group fixed">
+          <label>Başlangıç</label>
+          <input type="date" id="raporBaslangic">
+        </div>
+        <div class="form-group fixed">
+          <label>Bitiş</label>
+          <input type="date" id="raporBitis">
+        </div>
+        <div class="form-group fixed" style="min-width:100px">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary" onclick="renderRapor()">Getir</button>
+        </div>
+      </div>
+    </div>
+    <div id="raporBaslikBilgi" style="font-size:12px;color:var(--text2);margin-bottom:16px"></div>
+  </div>
+
+  <div class="stat-grid" id="raporStatlar"></div>
+
+  <div class="grid-2 section-gap">
+    <div class="card">
+      <div class="card-title">💰 Kasa Özeti</div>
+      <div id="raporKasa"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Gider Dağılımı</div>
+<p style="color:green;font-size:20px;padding:20px;position:fixed;bottom:0;z-index:9999">✅ ilk yarı OK</p>
+</body></html>
