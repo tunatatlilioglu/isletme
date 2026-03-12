@@ -459,6 +459,17 @@ tbody tr:last-child td { border-bottom: none; }
 </style>
 </head>
 <body>
+<div id="__hata" style="display:none;position:fixed;inset:0;z-index:9999;background:#fff;padding:24px;font-family:sans-serif;font-size:14px;overflow:auto;white-space:pre-wrap;color:#c00"></div>
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  var el = document.getElementById('__hata');
+  if (el) { el.style.display='block'; el.textContent = 'HATA:\n' + msg + '\nSatır: ' + line + '\nDosya: ' + src; }
+};
+window.addEventListener('unhandledrejection', function(e) {
+  var el = document.getElementById('__hata');
+  if (el) { el.style.display='block'; el.textContent = 'PROMISE HATA:\n' + (e.reason || e); }
+});
+</script>
 
 <!-- PIN GİRİŞ EKRANI -->
 <div class="login-screen" id="loginScreen">
@@ -3534,7 +3545,7 @@ function init() {
   renderEskiBorcOzet();
 }
 
-// PIN doğrulandıktan sonra load/init/fetchKurlar çağrılır (checkPin içinde)
+
 
 // ── Global scope export ──
 Object.assign(window, {
