@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kasa Test 8</title>
+<link rel="stylesheet" href="/isletme/kasa.css">
+</head>
+<body>
+<div id="hata" style="display:none;position:fixed;inset:0;z-index:9999;background:yellow;padding:20px;font-size:16px;color:red"></div>
+<script>
+window.onerror = function(msg,src,line) {
+  var el = document.getElementById('hata');
+  el.style.display='block';
+  el.textContent = 'HATA: ' + msg + ' (satir:' + line + ')';
+};
+document.body.style.background = 'pink';
+document.body.innerHTML += '<p style="font-size:24px;padding:20px">✅ JS çalışıyor</p>';
+</script>
+</body>
+</html>
