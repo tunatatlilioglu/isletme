@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kasa Test 4</title>
+<link rel="stylesheet" href="/isletme/kasa.css">
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+try {
+  const app = initializeApp({
+    apiKey: "AIzaSyAJFmBJpgrZEDlbFqRS_itUU_lEZklHEPg",
+    authDomain: "isletme-kasa.firebaseapp.com",
+    projectId: "isletme-kasa",
+    storageBucket: "isletme-kasa.firebasestorage.app",
+    messagingSenderId: "644544266522",
+    appId: "1:644544266522:web:fc70d2374a382ce0aa6ca3"
+  });
+  const db = getFirestore(app);
+  window._fb = { db, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, getDoc, fbReady: true };
+  document.getElementById('durum').textContent = '✅ Firebase + CSS tamam';
+} catch(e) {
+  document.getElementById('durum').textContent = '❌ Hata: ' + e.message;
+}
+</script>
+</head>
+<body>
+<h1>Test 4</h1>
+<p id="durum">Yükleniyor...</p>
+<script src="/isletme/kasa.js"></script>
+<script>document.body.innerHTML += '<p>✅ Herşey yüklendi</p>';</script>
+</body>
+</html>
