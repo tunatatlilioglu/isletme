@@ -100,6 +100,20 @@ window.addEventListener('unhandledrejection', function(e) {
     <button class="nav-tab" onclick="showPage('ortaklar',this)"><span class="label">Ortaklar</span></button>
     <button class="nav-tab" onclick="showPage('karzarar',this)"><span class="label">Kar/Zarar</span></button>
   </div>
+  <!-- Mobil hamburger menü -->
+  <div class="hamburger-wrap" id="hamburgerWrap">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleHamburger()">☰ Menü</button>
+    <div class="hamburger-menu" id="hamburgerMenu">
+      <button onclick="showPage('kasa');closeHamburger()">💰 Kasa</button>
+      <button onclick="showPage('toptanci');closeHamburger()">🏭 Toptancılar</button>
+      <button onclick="showPage('gider');closeHamburger()">📋 Giderler</button>
+      <button onclick="showPage('gecmis-borc');closeHamburger()">🕰 Geçmiş Borç</button>
+      <button onclick="showPage('ozet');closeHamburger()">📊 Özet</button>
+      <button onclick="showPage('rapor');closeHamburger()">📅 Rapor</button>
+      <button onclick="showPage('ortaklar');closeHamburger()">🤝 Ortaklar</button>
+      <button onclick="showPage('karzarar');closeHamburger()">📈 Kâr/Zarar</button>
+    </div>
+  </div>
   <div class="nav-actions">
     <span id="syncStatus" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--bg);color:var(--text3)">Baglanıyor...</span>
     <span class="nav-user" id="navUser">-- </span>
@@ -1025,16 +1039,6 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 </div>
 
-<div class="nav-bottom-bar" id="navBottomBar">
-  <button onclick="showPage('kasa',this)" class="active">💰<span>Kasa</span></button>
-  <button onclick="showPage('toptanci',this)">🏭<span>Toptancı</span></button>
-  <button onclick="showPage('gider',this)">📋<span>Giderler</span></button>
-  <button onclick="showPage('gecmis-borc',this)">🕰<span>G.Borç</span></button>
-  <button onclick="showPage('ozet',this)">📊<span>Özet</span></button>
-  <button onclick="showPage('rapor',this)">📅<span>Rapor</span></button>
-  <button onclick="showPage('ortaklar',this)">🤝<span>Ortaklar</span></button>
-  <button onclick="showPage('karzarar',this)">📈<span>Kâr</span></button>
-</div>
 <div class="toast" id="toast"></div>
 
 <script src="/isletme/kasa.js"></script>

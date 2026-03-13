@@ -2066,6 +2066,19 @@ function showPage(name, btn) {
   if (name === 'gecmis-borc') renderGecmisBorc();
 }
 
+// ===== HAMBURGER MENU =====
+function toggleHamburger() {
+  document.getElementById('hamburgerMenu').classList.toggle('open');
+}
+function closeHamburger() {
+  document.getElementById('hamburgerMenu').classList.remove('open');
+}
+// Dışarı tıklayınca kapat
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('hamburgerWrap');
+  if (wrap && !wrap.contains(e.target)) closeHamburger();
+});
+
 // ===== MODAL =====
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -2118,7 +2131,7 @@ function init() {
 // ── Global scope export ──
 Object.assign(window, {
   kasaSelectUser,
-  showPage, kasaEkle, kasaSil, fetchKurlar, openKurPanel, closeKurPanel, toggleKurPanel, saveManuelKur,
+  showPage, toggleHamburger, closeHamburger, kasaEkle, kasaSil, fetchKurlar, openKurPanel, closeKurPanel, toggleKurPanel, saveManuelKur,
   gbEkle, gbOdendi, gbSil, renderGecmisBorc,
   openToptanciModal, toptanciEkle, toptanciSil,
   openIslemModal, islemEkle, islemSil, islemTurDegisti, odemeYontemiDegisti,
