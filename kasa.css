@@ -296,7 +296,7 @@ tbody tr:last-child td { border-bottom: none; }
 .hamburger-menu button:last-child { border-bottom: none; }
 .hamburger-menu button:active { background: #f5f5f5; }
 
-
+@media (max-width: 700px) {
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
   nav { padding: 0 10px; }
