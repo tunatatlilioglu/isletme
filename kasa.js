@@ -2047,8 +2047,18 @@ function restoreData(event) {
 function showPage(name, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-bottom-bar button').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
+  // Bottom bar'daki ilgili butonu da aktif yap
+  const bottomBar = document.getElementById('navBottomBar');
+  if (bottomBar) {
+    bottomBar.querySelectorAll('button').forEach(b => {
+      if (b.getAttribute('onclick') && b.getAttribute('onclick').includes("'" + name + "'")) {
+        b.classList.add('active');
+      }
+    });
+  }
   if (name === 'ozet') renderOzet();
   if (name === 'rapor') renderRapor();
   if (name === 'ortaklar') renderOrtakSayfasi();
